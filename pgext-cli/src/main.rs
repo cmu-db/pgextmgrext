@@ -24,6 +24,7 @@ enum Commands {
     InstallAll(CmdInstallAll),
     List(CmdList),
     Test(CmdTest),
+    TestAll(CmdTestAll),
 }
 
 /// Init workspace
@@ -64,6 +65,10 @@ pub struct CmdTest {
     name: String,
 }
 
+/// Install all extensions in plugindb
+#[derive(Parser, Debug)]
+pub struct CmdTestAll {}
+
 fn main() -> Result<()> {
     let args = Cli::parse();
     match args.command {
@@ -81,6 +86,9 @@ fn main() -> Result<()> {
         }
         Commands::Test(cmd) => {
             cmd_test::cmd_test(cmd)?;
+        }
+        Commands::TestAll(cmd) => {
+            cmd_test::cmd_test_all(cmd)?;
         }
     }
     Ok(())

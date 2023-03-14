@@ -5,7 +5,15 @@ use anyhow::Result;
 use duct::cmd;
 use postgres::{Client, NoTls};
 
-use crate::{config::load_workspace_config, plugin::load_plugin_db, CmdTest};
+use crate::{config::load_workspace_config, plugin::load_plugin_db, CmdTest, CmdTestAll};
+
+pub fn cmd_test_all(_: CmdTestAll) -> Result<()> {
+    let db = load_plugin_db()?;
+    for plugin in db.plugins {
+        cmd_test(CmdTest { name: plugin.name })?;
+    }
+    Ok(())
+}
 
 pub fn cmd_test(cmd: CmdTest) -> Result<()> {
     let db = load_plugin_db()?;
