@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use console::style;
 
-use crate::{plugin::load_plugin_db, CmdInstall, CmdInstallAll};
+use crate::{config::load_workspace_config, plugin::load_plugin_db, CmdInstall, CmdInstallAll};
 
 fn create_workdir() -> Result<PathBuf> {
     std::fs::create_dir_all("pgextworkdir")?;
@@ -27,7 +27,7 @@ pub fn cmd_install_all(cmd: CmdInstallAll) -> Result<()> {
 pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
     let db = load_plugin_db()?;
     let workdir = create_workdir()?;
-    let pg_config = std::env::var("PG_CONFIG").context("cannot find PG_CONFIG env variable")?;
+    let pg_config = load_workspace_config()?.pg_config;
     if let Some(plugin) = db.plugins.iter().find(|x| x.name == cmd.name) {
         println!(
             "{} {}@{}",

@@ -1,9 +1,11 @@
+mod cmd_init;
 mod cmd_install;
 mod cmd_list;
+mod cmd_test;
+mod config;
 mod download;
 mod plugin;
 mod resolve_pgxs;
-
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
@@ -17,9 +19,20 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    Init(CmdInit),
     Install(CmdInstall),
     InstallAll(CmdInstallAll),
     List(CmdList),
+    Test(CmdTest),
+}
+
+/// Init workspace
+#[derive(Parser, Debug)]
+pub struct CmdInit {
+    /// Path to `pg_config`
+    pg_config: String,
+    /// Directory that stores Postgres config and data
+    pg_data: String,
 }
 
 /// Install extension
@@ -44,9 +57,19 @@ pub struct CmdInstallAll {
 #[derive(Parser, Debug)]
 pub struct CmdList {}
 
+/// Install extension
+#[derive(Parser, Debug)]
+pub struct CmdTest {
+    /// The name of the extension (in `plugindb.toml`)
+    name: String,
+}
+
 fn main() -> Result<()> {
     let args = Cli::parse();
     match args.command {
+        Commands::Init(cmd) => {
+            cmd_init::cmd_init(cmd)?;
+        }
         Commands::Install(cmd) => {
             cmd_install::cmd_install(cmd)?;
         }
@@ -55,6 +78,9 @@ fn main() -> Result<()> {
         }
         Commands::List(_) => {
             cmd_list::cmd_list()?;
+        }
+        Commands::Test(cmd) => {
+            cmd_test::cmd_test(cmd)?;
         }
     }
     Ok(())
