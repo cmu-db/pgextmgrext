@@ -4,6 +4,8 @@ use anyhow::Result;
 use console::style;
 use duct::cmd;
 
+use crate::plugin::GitDownload;
+
 pub fn download_zip(
     zip_url: String,
     download_path: &Path,
@@ -72,6 +74,40 @@ pub fn download_tar(
         cmd.stderr_null().stdout_null()
     };
     cmd.run()?;
+
+    Ok(())
+}
+
+pub fn download_git(
+    src: &GitDownload,
+    download_path: &Path,
+    build_dir: &Path,
+    verbose: bool,
+) -> Result<()> {
+    if download_path.exists() {
+        println!("{} {}", style("Skipping Download").bold().blue(), src.url);
+    } else {
+        println!("{} {}", style("Clone").bold().blue(), src.url);
+        if verbose {
+            cmd!("git", "clone", &src.url, &download_path)
+        } else {
+            cmd!("git", "clone", &src.url, &download_path, "--quiet")
+        }
+        .run()?;
+    }
+
+    cmd!("git", "reset", "--hard").dir(download_path).run()?;
+    if let Some(rev) = &src.rev {
+        cmd!("git", "checkout", rev).dir(download_path).run()?;
+    }
+
+    cmd!("mkdir", "-p", &build_dir).run()?;
+    let src_path = if let Some(path) = &src.sub_path {
+        download_path.join(format!("{}/", path))
+    } else {
+        download_path.to_path_buf()
+    };
+    cmd!("cp", "-a", src_path, &build_dir).run()?;
 
     Ok(())
 }
