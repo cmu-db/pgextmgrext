@@ -59,8 +59,7 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
                 cmd.verbose,
             )?;
         } else if let Some(src) = &plugin.download_git {
-            let download_path = workdir.join("downloads").join(name_tag);
-            crate::download::download_git(src, &download_path, &build_dir, cmd.verbose)?;
+            crate::download::download_git(src, &build_dir, cmd.verbose)?;
         } else if let Some(src) = &plugin.copy_from_contrib {
             let contrib_dir = PathBuf::from(&workspace_config.pg_contrib).join(format!("{}/", src));
             if !contrib_dir.exists() {
@@ -85,6 +84,19 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
                 &workspace_config.pg_config,
                 cmd.verbose,
             )?,
+            "pgx" => {
+                cmd!(
+                    "cargo",
+                    "pgx",
+                    "install",
+                    "-c",
+                    &workspace_config.pg_config,
+                    "--release"
+                )
+                .dir(&build_dir)
+                .run()
+                .context("failed to install")?;
+            }
             "pgsrctree" => {
                 println!(
                     "{}: in Postgres source tree",

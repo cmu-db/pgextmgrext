@@ -78,36 +78,23 @@ pub fn download_tar(
     Ok(())
 }
 
-pub fn download_git(
-    src: &GitDownload,
-    download_path: &Path,
-    build_dir: &Path,
-    verbose: bool,
-) -> Result<()> {
-    if download_path.exists() {
+pub fn download_git(src: &GitDownload, build_dir: &Path, verbose: bool) -> Result<()> {
+    if build_dir.exists() {
         println!("{} {}", style("Skipping Download").bold().blue(), src.url);
     } else {
         println!("{} {}", style("Clone").bold().blue(), src.url);
         if verbose {
-            cmd!("git", "clone", &src.url, &download_path)
+            cmd!("git", "clone", &src.url, &build_dir)
         } else {
-            cmd!("git", "clone", &src.url, &download_path, "--quiet")
+            cmd!("git", "clone", &src.url, &build_dir, "--quiet")
         }
         .run()?;
     }
 
-    cmd!("git", "reset", "--hard").dir(download_path).run()?;
+    cmd!("git", "reset", "--hard").dir(build_dir).run()?;
     if let Some(rev) = &src.rev {
-        cmd!("git", "checkout", rev).dir(download_path).run()?;
+        cmd!("git", "checkout", rev).dir(build_dir).run()?;
     }
-
-    cmd!("mkdir", "-p", &build_dir).run()?;
-    let src_path = if let Some(path) = &src.sub_path {
-        download_path.join(format!("{}/", path))
-    } else {
-        download_path.to_path_buf()
-    };
-    cmd!("cp", "-a", src_path, &build_dir).run()?;
 
     Ok(())
 }

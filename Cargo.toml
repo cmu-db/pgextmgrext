@@ -3,5 +3,6 @@ members = [
     "pgext-cli",
 ]
 exclude = [
-    "pgx_show_hooks"
+    "pgx_show_hooks",
+    "pgextworkdir",
 ]
