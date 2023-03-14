@@ -2,10 +2,10 @@
 name = "pgjwt"
 version = "9742dab1b2f297ad3811120db7b21451bca2d3c9"
 download_url_tar = "https://github.com/michelp/pgjwt/archive/9742dab1b2f297ad3811120db7b21451bca2d3c9.tar.gz"
-install_method = "pgxs"
+resolver = "pgxs"
 
 [[plugin]]
 name = "pg_hint_plan"
 version = "1.5.0"
 download_url_zip = "https://github.com/ossc-db/pg_hint_plan/archive/refs/tags/REL15_1_5_0.zip"
-install_method = "pgxs"
+resolver = "pgxs"
