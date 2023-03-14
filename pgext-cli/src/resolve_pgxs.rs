@@ -27,9 +27,17 @@ pub fn resolve_build_pgxs(build_dir: &Path, pg_config: &str) -> Result<()> {
                 let parent = path.parent().unwrap();
                 let num_cpus = num_cpus::get().to_string();
                 let pg_config = format!("PG_CONFIG={}", pg_config);
-                cmd!("make", "-j", num_cpus, "install", pg_config)
-                    .dir(parent)
-                    .run()?;
+                cmd!(
+                    "make",
+                    "-s",
+                    "-j",
+                    num_cpus,
+                    "install",
+                    pg_config,
+                    "USE_PGXS=1"
+                )
+                .dir(parent)
+                .run()?;
                 return Ok(());
             }
         }
