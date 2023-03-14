@@ -61,22 +61,20 @@ pub fn resolve_build_pgxs(
                 println!("Found Makefile at {}", path.display());
                 let parent = path.parent().unwrap();
 
-                if parent.join("configure").exists() {
-                    if !parent.join("config.status").exists() {
-                        println!(
-                            "{} {}",
-                            style("Configure").bold().blue(),
-                            plugin.resolver_args.join(" ")
-                        );
+                if parent.join("configure").exists() && !parent.join("config.status").exists() {
+                    println!(
+                        "{} {}",
+                        style("Configure").bold().blue(),
+                        plugin.resolver_args.join(" ")
+                    );
 
-                        let cmd = duct::cmd(parent.join("configure"), plugin.resolver_args.iter());
-                        let cmd = if verbose {
-                            cmd
-                        } else {
-                            cmd.stderr_null().stdout_null()
-                        };
-                        cmd.dir(parent).run().context("failed to configure")?;
-                    }
+                    let cmd = duct::cmd(parent.join("configure"), plugin.resolver_args.iter());
+                    let cmd = if verbose {
+                        cmd
+                    } else {
+                        cmd.stderr_null().stdout_null()
+                    };
+                    cmd.dir(parent).run().context("failed to configure")?;
                 }
 
                 let pg_config = format!("PG_CONFIG={}", pg_config);

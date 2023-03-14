@@ -7,6 +7,7 @@ pub struct Plugin {
     pub version: String,
     pub download_url_tar: Option<String>,
     pub download_url_zip: Option<String>,
+    pub no_download: Option<bool>,
     pub resolver: String,
     #[serde(default)]
     pub resolver_args: Vec<String>,

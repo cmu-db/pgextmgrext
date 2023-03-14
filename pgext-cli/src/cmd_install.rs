@@ -57,6 +57,8 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
                 &build_dir,
                 cmd.verbose,
             )?;
+        } else if let Some(true) = &plugin.no_download {
+            println!("{} {}", style("Skipping Download").bold().blue(), name_tag);
         } else {
             return Err(anyhow!("No download url found in plugindb.toml"));
         }
@@ -68,6 +70,12 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
                 &pg_config,
                 cmd.verbose,
             )?,
+            "pgsrctree" => {
+                println!(
+                    "{}: in Postgres source tree",
+                    style("Skipping Build").bold().blue()
+                );
+            }
             _ => return Err(anyhow!("Unknown resolver: {}", plugin.resolver)),
         }
 

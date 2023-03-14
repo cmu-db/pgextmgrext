@@ -46,17 +46,26 @@ download_url_tar = "https://github.com/citusdata/pg_cron/archive/refs/tags/v1.5.
 resolver = "pgxs"
 require_shared_preload_library = true
 
-# [[plugins]]
-# name = "pg_prewarm"
-# In Postgres source tree
+[[plugins]]
+name = "pg_prewarm"
+version = "0.0.0"
+resolver = "pgsrctree"
+no_download = true
+require_shared_preload_library = true
 
-# [[plugins]]
-# name = "auto_explain"
-# In Postgres source tree
+[[plugins]]
+name = "auto_explain"
+version = "0.0.0"
+resolver = "pgsrctree"
+no_download = true
+require_shared_preload_library = true
 
-# [[plugins]]
-# name = "pg_stat_statements"
-# In Postgres source tree
+[[plugins]]
+name = "pg_stat_statements"
+version = "0.0.0"
+resolver = "pgsrctree"
+no_download = true
+require_shared_preload_library = true
 
 [[plugins]]
 name = "pg_similarity"
