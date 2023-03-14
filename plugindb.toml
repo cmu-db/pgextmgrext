@@ -83,10 +83,10 @@ require_shared_preload_library = true
 
 # [[plugins]]
 # name = "neon"
-# download_git = "https://github.com/neondatabase/neon"
-# download_git_rev = "1401021"
-# download_git_subpath = "pgxn/neon"
+# version = "0.0.0"
+# download_git = { url = "https://github.com/neondatabase/neon", rev = "1401021", sub_path = "pgxn/neon" }
 # resolver = "pgxs"
+# Doesn't work with the original Postgres
 
 [[plugins]]
 name = "citus"

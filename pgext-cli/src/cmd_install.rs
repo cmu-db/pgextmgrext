@@ -57,6 +57,9 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
                 &build_dir,
                 cmd.verbose,
             )?;
+        } else if let Some(src) = &plugin.download_git {
+            let download_path = workdir.join("downloads").join(name_tag);
+            crate::download::download_git(src, &download_path, &build_dir, cmd.verbose)?;
         } else if let Some(true) = &plugin.no_download {
             println!("{} {}", style("Skipping Download").bold().blue(), name_tag);
         } else {
