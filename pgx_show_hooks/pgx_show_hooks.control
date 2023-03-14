@@ -1,0 +1,6 @@
+comment = 'pgx_show_hooks:  Created by pgx'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/pgx_show_hooks'
+relocatable = false
+superuser = true
+schema = 'show_hooks'
