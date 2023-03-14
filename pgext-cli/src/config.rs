@@ -7,10 +7,11 @@ use serde::{Deserialize, Serialize};
 pub struct WorkspaceConfig {
     pub pg_config: String,
     pub pg_data: String,
+    pub pg_contrib: String,
 }
 
 pub fn load_workspace_config() -> Result<WorkspaceConfig> {
     let config = std::fs::read_to_string(PathBuf::from("pgextworkdir").join("config.toml"))
-        .context("cannot find workkspace config, did you run init?")?;
+        .context("cannot find workspace config, did you run init?")?;
     Ok(toml::from_str(&config)?)
 }

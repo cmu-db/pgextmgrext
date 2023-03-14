@@ -1,7 +1,8 @@
-use std::fmt::Write;
 use std::path::PathBuf;
+use std::{fmt::Write, iter};
 
 use anyhow::Result;
+use console::style;
 use duct::cmd;
 use postgres::{Client, NoTls};
 
@@ -10,7 +11,9 @@ use crate::{config::load_workspace_config, plugin::load_plugin_db, CmdTest, CmdT
 pub fn cmd_test_all(_: CmdTestAll) -> Result<()> {
     let db = load_plugin_db()?;
     for plugin in db.plugins {
-        cmd_test(CmdTest { name: plugin.name })?;
+        if let Err(e) = cmd_test(CmdTest { name: plugin.name }) {
+            println!("{}: {}", style("Error").red().bold(), e);
+        }
     }
     Ok(())
 }
@@ -18,11 +21,19 @@ pub fn cmd_test_all(_: CmdTestAll) -> Result<()> {
 pub fn cmd_test(cmd: CmdTest) -> Result<()> {
     let db = load_plugin_db()?;
     let config = load_workspace_config()?;
+
     let plugin = if let Some(plugin) = db.plugins.iter().find(|x| x.name == cmd.name) {
         plugin.clone()
     } else {
         anyhow::bail!("Plugin not found");
     };
+
+    println!(
+        "{} {}",
+        style("Testing").blue().bold(),
+        style(&plugin.name).bold()
+    );
+
     cmd!("cargo", "pgx", "stop", "pg15")
         .dir("pgx_show_hooks")
         .run()?;
@@ -75,10 +86,9 @@ pub fn cmd_test(cmd: CmdTest) -> Result<()> {
 
     client.execute("CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;", &[])?;
 
-    client.execute(
-        &format!("CREATE EXTENSION IF NOT EXISTS {};", plugin.name),
-        &[],
-    )?;
+    for extname in plugin.dependencies.iter().chain(iter::once(&plugin.name)) {
+        client.execute(&format!("CREATE EXTENSION IF NOT EXISTS {};", extname), &[])?;
+    }
 
     let rows = client.query("SELECT * FROM show_hooks.all();", &[])?;
     rows.iter().for_each(|x| {
@@ -87,7 +97,14 @@ pub fn cmd_test(cmd: CmdTest) -> Result<()> {
         }
     });
 
-    client.execute(&format!("DROP EXTENSION {};", plugin.name), &[])?;
+    for extname in plugin
+        .dependencies
+        .iter()
+        .chain(iter::once(&plugin.name))
+        .rev()
+    {
+        client.execute(&format!("DROP EXTENSION {};", extname), &[])?;
+    }
 
     cmd!("cargo", "pgx", "stop", "pg15")
         .dir("pgx_show_hooks")

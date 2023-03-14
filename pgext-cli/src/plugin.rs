@@ -15,12 +15,15 @@ pub struct Plugin {
     pub download_url_tar: Option<String>,
     pub download_url_zip: Option<String>,
     pub download_git: Option<GitDownload>,
+    pub copy_from_contrib: Option<String>,
     pub no_download: Option<bool>,
     pub resolver: String,
     #[serde(default)]
     pub resolver_args: Vec<String>,
     #[serde(default)]
     pub require_shared_preload_library: bool,
+    #[serde(default)]
+    pub dependencies: Vec<String>,
 }
 
 #[derive(Deserialize)]

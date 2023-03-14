@@ -7,6 +7,7 @@ use crate::{config::WorkspaceConfig, CmdInit};
 pub fn cmd_init(cmd: CmdInit) -> Result<()> {
     println!("pg_config: {}", cmd.pg_config);
     println!("pg_data: {}", cmd.pg_data);
+    println!("pg_contrib: {}", cmd.pg_contrib);
 
     if !PathBuf::from(cmd.pg_data.clone())
         .join("postgresql.conf")
@@ -20,6 +21,7 @@ pub fn cmd_init(cmd: CmdInit) -> Result<()> {
     let config = WorkspaceConfig {
         pg_config: cmd.pg_config,
         pg_data: cmd.pg_data,
+        pg_contrib: cmd.pg_contrib,
     };
     std::fs::write(
         PathBuf::from("pgextworkdir").join("config.toml"),
