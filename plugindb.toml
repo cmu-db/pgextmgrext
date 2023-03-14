@@ -9,36 +9,42 @@ name = "pg_hint_plan"
 version = "1.5.0"
 download_url_zip = "https://github.com/ossc-db/pg_hint_plan/archive/refs/tags/REL15_1_5_0.zip"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 [[plugins]]
 name = "orafce"
 version = "4.2.1"
 download_url_tar = "https://github.com/orafce/orafce/archive/refs/tags/VERSION_4_2_1.tar.gz"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 [[plugins]]
 name = "pgaudit"
 version = "1.7.0"
 download_url_tar = "https://github.com/pgaudit/pgaudit/archive/refs/tags/1.7.0.tar.gz"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 [[plugins]]
 name = "pglogical"
 version = "2.4.2"
 download_url_tar = "https://github.com/2ndQuadrant/pglogical/archive/refs/tags/REL2_4_2.tar.gz"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 [[plugins]]
 name = "pg_bigm"
 version = "1.2"
 download_url_tar = "https://github.com/pgbigm/pg_bigm/archive/refs/tags/v1.2-20200228.tar.gz"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 [[plugins]]
 name = "pg_cron"
 version = "1.5.1"
 download_url_tar = "https://github.com/citusdata/pg_cron/archive/refs/tags/v1.5.1.tar.gz"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 # [[plugins]]
 # name = "pg_prewarm"
@@ -57,16 +63,26 @@ name = "pg_similarity"
 version = "b9cb0a2d501b91e33cd1ef550b05483ca3563f71"
 download_url_tar = "https://github.com/eulerto/pg_similarity/archive/b9cb0a2d501b91e33cd1ef550b05483ca3563f71.tar.gz"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 [[plugins]]
 name = "plprofiler"
 version = "4.2.1"
 download_url_tar = "https://github.com/bigsql/plprofiler/archive/refs/tags/REL4_2_1.tar.gz"
 resolver = "pgxs"
+require_shared_preload_library = true
 
 # [[plugins]]
 # name = "neon"
-# download_git = "https://github.com/neondatabase/neon/tree/main/pgxn"
+# download_git = "https://github.com/neondatabase/neon"
 # download_git_rev = "1401021"
-# download_git_path = "pgxn/neon"
+# download_git_subpath = "pgxn/neon"
 # resolver = "pgxs"
+
+[[plugins]]
+name = "citus"
+version = "11.2.0"
+download_url_tar = "https://github.com/citusdata/citus/archive/refs/tags/v11.2.0.tar.gz"
+resolver = "pgxs"
+resolver_args = ["--without-lz4", "--without-zstd"]
+require_shared_preload_library = true

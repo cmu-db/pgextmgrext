@@ -26,6 +26,9 @@ enum Commands {
 pub struct CmdInstall {
     /// The name of the extension (in `plugindb.toml`)
     name: String,
+    /// Enable verbose mode
+    #[clap(short, long)]
+    verbose: bool,
 }
 
 /// List all extension in plugindb

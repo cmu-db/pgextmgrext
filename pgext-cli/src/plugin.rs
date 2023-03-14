@@ -8,6 +8,8 @@ pub struct Plugin {
     pub download_url_tar: Option<String>,
     pub download_url_zip: Option<String>,
     pub resolver: String,
+    #[serde(default)]
+    pub resolver_args: Vec<String>,
 }
 
 #[derive(Deserialize)]

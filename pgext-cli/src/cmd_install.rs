@@ -29,18 +29,28 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
 
         if let Some(url) = &plugin.download_url_zip {
             let download_path = workdir.join("downloads").join(format!("{}.zip", name_tag));
-            crate::download::download_zip(url.to_string(), &download_path, &build_dir)?;
+            crate::download::download_zip(
+                url.to_string(),
+                &download_path,
+                &build_dir,
+                cmd.verbose,
+            )?;
         } else if let Some(url) = &plugin.download_url_tar {
             let download_path = workdir
                 .join("downloads")
                 .join(format!("{}.tar.gz", name_tag));
-            crate::download::download_tar(url.to_string(), &download_path, &build_dir)?;
+            crate::download::download_tar(
+                url.to_string(),
+                &download_path,
+                &build_dir,
+                cmd.verbose,
+            )?;
         } else {
             return Err(anyhow!("No download url found in plugindb.toml"));
         }
 
         match plugin.resolver.as_str() {
-            "pgxs" => crate::resolve_pgxs::resolve_build_pgxs(&build_dir, &pg_config)?,
+            "pgxs" => crate::resolve_pgxs::resolve_build_pgxs(plugin, &build_dir, &pg_config)?,
             _ => return Err(anyhow!("Unknown resolver: {}", plugin.resolver)),
         }
 
