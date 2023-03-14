@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use console::style;
+use duct::cmd;
 
 use crate::{config::load_workspace_config, plugin::load_plugin_db, CmdInstall, CmdInstallAll};
 
@@ -27,7 +28,7 @@ pub fn cmd_install_all(cmd: CmdInstallAll) -> Result<()> {
 pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
     let db = load_plugin_db()?;
     let workdir = create_workdir()?;
-    let pg_config = load_workspace_config()?.pg_config;
+    let workspace_config = load_workspace_config()?;
     if let Some(plugin) = db.plugins.iter().find(|x| x.name == cmd.name) {
         println!(
             "{} {}@{}",
@@ -60,6 +61,17 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
         } else if let Some(src) = &plugin.download_git {
             let download_path = workdir.join("downloads").join(name_tag);
             crate::download::download_git(src, &download_path, &build_dir, cmd.verbose)?;
+        } else if let Some(src) = &plugin.copy_from_contrib {
+            let contrib_dir = PathBuf::from(&workspace_config.pg_contrib).join(format!("{}/", src));
+            if !contrib_dir.exists() {
+                return Err(anyhow!(
+                    "Could not find contrib source: {}",
+                    contrib_dir.display()
+                ));
+            }
+            cmd!("cp", "-a", contrib_dir, &build_dir)
+                .run()
+                .context("failed to copy")?;
         } else if let Some(true) = &plugin.no_download {
             println!("{} {}", style("Skipping Download").bold().blue(), name_tag);
         } else {
@@ -70,7 +82,7 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
             "pgxs" => crate::resolve_pgxs::resolve_build_pgxs(
                 plugin,
                 &build_dir,
-                &pg_config,
+                &workspace_config.pg_config,
                 cmd.verbose,
             )?,
             "pgsrctree" => {

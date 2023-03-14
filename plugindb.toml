@@ -3,6 +3,7 @@ name = "pgjwt"
 version = "9742dab1b2f297ad3811120db7b21451bca2d3c9"
 download_url_tar = "https://github.com/michelp/pgjwt/archive/9742dab1b2f297ad3811120db7b21451bca2d3c9.tar.gz"
 resolver = "pgxs"
+dependencies = ["pgcrypto"]
 
 [[plugins]]
 name = "pg_hint_plan"
@@ -56,9 +57,15 @@ require_shared_preload_library = true
 [[plugins]]
 name = "auto_explain"
 version = "0.0.0"
+resolver = "pgxs"
+copy_from_contrib = "auto_explain"
+require_shared_preload_library = true
+
+[[plugins]]
+name = "pgcrypto"
+version = "0.0.0"
 resolver = "pgsrctree"
 no_download = true
-require_shared_preload_library = true
 
 [[plugins]]
 name = "pg_stat_statements"

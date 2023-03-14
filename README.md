@@ -3,7 +3,7 @@
 ## Usage
 
 ```
-cargo run -- init ~/.pgx/15.2/pgx-install/bin/pg_config ~/.pgx/data-15/
+cargo run -- init ~/.pgx/15.2/pgx-install/bin/pg_config ~/.pgx/data-15/ ~/.pgx/15.2/contrib/
 cargo run -- install pgjwt
 ```
 

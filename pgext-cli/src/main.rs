@@ -34,6 +34,8 @@ pub struct CmdInit {
     pg_config: String,
     /// Directory that stores Postgres config and data
     pg_data: String,
+    /// Source code contrib directory
+    pg_contrib: String,
 }
 
 /// Install extension
