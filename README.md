@@ -14,7 +14,7 @@ Currently we only support tar/zip-packed PGXS extensions.
 This extensions will show all function address of hooks in the Postgres. To build and use it,
 
 ```
-cargo install cargo-pgx@0.7.3 --locked
+cargo install cargo-pgx@0.7.4 --locked
 cd pgx_show_hooks
 cargo pgx run pg15
 ```
