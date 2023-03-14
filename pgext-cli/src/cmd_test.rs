@@ -65,10 +65,7 @@ pub fn cmd_test(cmd: CmdTest) -> Result<()> {
         );
     });
 
-    client.execute(
-        "CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;",
-        &[],
-    )?;
+    client.execute("CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;", &[])?;
 
     client.execute(
         &format!("CREATE EXTENSION IF NOT EXISTS {};", plugin.name),
@@ -77,11 +74,9 @@ pub fn cmd_test(cmd: CmdTest) -> Result<()> {
 
     let rows = client.query("SELECT * FROM show_hooks.all();", &[])?;
     rows.iter().for_each(|x| {
-        println!(
-            "{}: {}",
-            x.get::<_, String>(0),
-            x.get::<_, Option<String>>(1).is_some()
-        );
+        if x.get::<_, Option<String>>(1).is_some() {
+            println!("{}: installed", x.get::<_, String>(0),);
+        }
     });
 
     client.execute(&format!("DROP EXTENSION {};", plugin.name), &[])?;

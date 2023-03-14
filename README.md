@@ -31,5 +31,5 @@ DROP EXTENSION pgx_show_hooks;
 ## Test Hooks
 
 ```
-cargo run -- test pg_cron
+cargo run -- test pg_stat_statements
 ```
