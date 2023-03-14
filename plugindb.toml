@@ -102,3 +102,9 @@ download_url_tar = "https://github.com/citusdata/citus/archive/refs/tags/v11.2.0
 resolver = "pgxs"
 resolver_args = ["--without-lz4", "--without-zstd"]
 require_shared_preload_library = true
+
+[[plugins]]
+name = "pg_tiktoken"
+version = "0.0.1"
+download_git = { url = "https://github.com/kelvich/pg_tiktoken", rev = "801f84f" }
+resolver = "pgx"
