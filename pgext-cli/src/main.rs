@@ -18,6 +18,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     Install(CmdInstall),
+    InstallAll(CmdInstallAll),
     List(CmdList),
 }
 
@@ -26,6 +27,17 @@ enum Commands {
 pub struct CmdInstall {
     /// The name of the extension (in `plugindb.toml`)
     name: String,
+    /// Enable verbose mode
+    #[clap(short, long)]
+    verbose: bool,
+}
+
+/// Install all extensions in plugindb
+#[derive(Parser, Debug)]
+pub struct CmdInstallAll {
+    /// Enable verbose mode
+    #[clap(short, long)]
+    verbose: bool,
 }
 
 /// List all extension in plugindb
@@ -37,6 +49,9 @@ fn main() -> Result<()> {
     match args.command {
         Commands::Install(cmd) => {
             cmd_install::cmd_install(cmd)?;
+        }
+        Commands::InstallAll(cmd) => {
+            cmd_install::cmd_install_all(cmd)?;
         }
         Commands::List(_) => {
             cmd_list::cmd_list()?;
