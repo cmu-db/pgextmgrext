@@ -3,7 +3,7 @@
 ## Usage
 
 ```
-export PG_CONFIG="~/.pgx/15.2/pgx-install/bin/pg_config"
+cargo run -- init ~/.pgx/15.2/pgx-install/bin/pg_config ~/.pgx/data-15/
 cargo run -- install pgjwt
 ```
 
@@ -26,4 +26,10 @@ Then run SQL:
 CREATE EXTENSION pgx_show_hooks;
 SELECT * FROM show_hooks.all();
 DROP EXTENSION pgx_show_hooks;
+```
+
+## Test Hooks
+
+```
+cargo run -- test pg_stat_statements
 ```

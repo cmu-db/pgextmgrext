@@ -1,14 +1,14 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct GitDownload {
     pub url: String,
     pub rev: Option<String>,
     pub sub_path: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Plugin {
     pub name: String,
     pub version: String,
@@ -19,6 +19,8 @@ pub struct Plugin {
     pub resolver: String,
     #[serde(default)]
     pub resolver_args: Vec<String>,
+    #[serde(default)]
+    pub require_shared_preload_library: bool,
 }
 
 #[derive(Deserialize)]
