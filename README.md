@@ -3,15 +3,11 @@
 ## Usage
 
 ```
-cargo run -- install https://github.com/michelp/pgjwt/archive/9742dab1b2f297ad3811120db7b21451bca2d3c9.tar.gz ~/.pgx/15.2/pgx-install/bin/pg_config
+export PG_CONFIG="~/.pgx/15.2/pgx-install/bin/pg_config"
+cargo run -- install pgjwt
 ```
 
-Currently we only support tar-packed PGXS extensions.
-
-## Tested Plugins
-
-* https://github.com/michelp/pgjwt/archive/9742dab1b2f297ad3811120db7b21451bca2d3c9.tar.gz
-* https://github.com/ossc-db/pg_hint_plan/archive/refs/tags/REL15_1_5_0.zip
+Currently we only support tar/zip-packed PGXS extensions.
 
 ## Hook Detect Extension
 
