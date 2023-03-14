@@ -1,2 +1,7 @@
 [workspace]
-members = ["pgext-cli"]
+members = [
+    "pgext-cli",
+]
+exclude = [
+    "pgx_show_hooks"
+]
