@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::{fmt::Write, iter};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use console::style;
 use duct::cmd;
 use postgres::{Client, NoTls};
@@ -61,6 +61,7 @@ pub fn cmd_test(cmd: CmdTest) -> Result<()> {
         }
         std::fs::write(conf, new_pgconf)?;
     }
+
     cmd!("cargo", "pgx", "start", "pg15")
         .dir("pgx_show_hooks")
         .run()?;
@@ -76,13 +77,22 @@ pub fn cmd_test(cmd: CmdTest) -> Result<()> {
     println!("shared_preload_libraries: {}", result.get::<_, String>(0));
 
     let result = client.query("SELECT extname, extversion FROM pg_extension;", &[])?;
-    result.iter().for_each(|x| {
-        println!(
-            "installed_pg_extension: {}@{}",
-            x.get::<_, String>(0),
-            x.get::<_, String>(1)
-        );
-    });
+    for x in result.iter() {
+        let name = x.get::<_, String>(0);
+        let ver = x.get::<_, String>(1);
+        if name == "plpgsql" {
+            // it's fine to keep them
+            println!("installed pg_extension: {name}@{ver}");
+        } else if name == "pgx_show_hooks" {
+            println!("installed pg_extension: {name}@{ver}");
+            if ver != "0.0.2" {
+                bail!("require pgx_show_hooks@0.0.2, but found {ver}");
+            }
+        } else {
+            println!("dropping pg_extension: {name}@{ver}");
+            client.execute(&format!("DROP EXTENSION {};", name), &[])?;
+        }
+    }
 
     client.execute("CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;", &[])?;
 

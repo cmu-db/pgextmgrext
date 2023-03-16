@@ -21,6 +21,7 @@ struct Cli {
 enum Commands {
     Init(CmdInit),
     Install(CmdInstall),
+    InstallHook(CmdInstallHook),
     InstallAll(CmdInstallAll),
     List(CmdList),
     Test(CmdTest),
@@ -47,6 +48,10 @@ pub struct CmdInstall {
     #[clap(short, long)]
     verbose: bool,
 }
+
+/// Install show_hooks extension
+#[derive(Parser, Debug)]
+pub struct CmdInstallHook {}
 
 /// Install all extensions in plugindb
 #[derive(Parser, Debug)]
@@ -91,6 +96,9 @@ fn main() -> Result<()> {
         }
         Commands::TestAll(cmd) => {
             cmd_test::cmd_test_all(cmd)?;
+        }
+        Commands::InstallHook(_) => {
+            cmd_install::cmd_install_hook()?;
         }
     }
     Ok(())

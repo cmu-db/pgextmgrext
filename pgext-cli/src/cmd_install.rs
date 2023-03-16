@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Context, Result};
 use console::style;
 use duct::cmd;
+use postgres::{Client, NoTls};
 
 use crate::{config::load_workspace_config, plugin::load_plugin_db, CmdInstall, CmdInstallAll};
 
@@ -120,4 +121,39 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
             cmd.name
         ))
     }
+}
+
+pub fn cmd_install_hook() -> Result<()> {
+    let config = load_workspace_config()?;
+    println!(
+        "{} {}",
+        style("Building").blue().bold(),
+        style("pgx_show_hooks").bold()
+    );
+
+    cmd!("cargo", "pgx", "install", "-c", &config.pg_config)
+        .dir("pgx_show_hooks")
+        .run()?;
+
+    println!(
+        "{} {}",
+        style("Installing").blue().bold(),
+        style("pgx_show_hooks").bold()
+    );
+    let whoami = cmd!("whoami").read()?;
+    let mut client = Client::connect(
+        &format!(
+            "host=localhost dbname=postgres user={} port=28815",
+            whoami.trim()
+        ),
+        NoTls,
+    )?;
+    client.execute("DROP EXTENSION IF EXISTS pgx_show_hooks;", &[])?;
+    client.execute("CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;", &[])?;
+    println!(
+        "{} {}",
+        style("Installed").green().bold(),
+        style("pgx_show_hooks").bold()
+    );
+    Ok(())
 }
