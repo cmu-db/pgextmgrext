@@ -108,3 +108,77 @@ name = "pg_tiktoken"
 version = "0.0.1"
 download_git = { url = "https://github.com/kelvich/pg_tiktoken", rev = "801f84f" }
 resolver = "pgx"
+
+
+# TODO(yuchen): Error - sed: 1: "postgres.c": extra characters at the end of p command
+# might be macOS vs GNU
+# [[plugins]]
+# name = "pg_task"
+# version = "1.0.0"
+# download_url_tar = "https://github.com/RekGRpth/pg_task/archive/refs/tags/v1.0.0.tar.gz"
+# resolver = "pgxs"
+# require_shared_preload_library = true
+
+
+# TODO(yuchen): some clang warnings, but build successfully
+[[plugins]]
+name = "plpgsql_check"
+version = "2.3.3"
+download_url_tar = "https://github.com/okbob/plpgsql_check/archive/refs/tags/v2.3.3.tar.gz"
+resolver = "pgxs"
+require_shared_preload_library = true
+
+
+# TODO(yuchen): Error - conflicting types for 'pgqr_compare' (size_t, uint64_t error)
+# [[plugins]]
+# name = "pg_query_rewrite"
+# version = "3d4c2e33c59edd577eb7568bb8a9e396a2d1915b"
+# download_url_tar = "https://github.com/pierreforstmann/pg_query_rewrite/archive/3d4c2e33c59edd577eb7568bb8a9e396a2d1915b.tar.gz"
+# resolver = "pgxs"
+# require_shared_preload_library = true
+
+[[plugins]]
+name = "hll"
+version = "8b9821c9f7a4674cb64db977a6c89f4381d0c0d0"
+download_git = { url = "https://github.com/citusdata/postgresql-hll", rev = "8b9821c" }
+resolver = "pgxs"
+require_shared_preload_library = true
+
+# TODO(yuchen): Error - Failed to resolve extension name
+# [[plugins]]
+# name = "pg_auto_failover"
+# version = "dc395982d816270ccb0c75b037f5f0f6f404e8d8"
+# download_git = { url = "https://github.com/citusdata/pg_auto_failover", rev = "dc39598" }
+# resolver = "pgxs"
+# require_shared_preload_library = true
+
+[[plugins]]
+name = "hypopg"
+version = "e7d1fea516626e752e2143bab6ebe665bc812378"
+download_git = { url = "https://github.com/HypoPG/hypopg", rev = "e7d1fea" }
+resolver = "pgxs"
+require_shared_preload_library = true
+
+# TODO(yuchen): Error - Failed to resolve extension name
+# [[plugins]]
+# name = "pgextwlist"
+# version = "bee26b7e92e2d65a17e9ef26ba5803f50ff6987c"
+# download_git = { url = "https://github.com/dimitri/pgextwlist", rev = "bee26b7" }
+# resolver = "pgxs"
+# require_shared_preload_library = true
+
+
+[[plugins]]
+name = "imcs"
+version = "2e73bdffbde734f3fac51ec2f71a37602d4f688f"
+download_git = { url = "https://github.com/knizhnik/imcs", rev = "2e73bdf" }
+resolver = "pgxs"
+require_shared_preload_library = true
+
+
+[[plugins]]
+name = "pgsentinel"
+version = "fef77c8ae8061b22f12fc33872216eda5f10edc2"
+download_git = { url = "https://github.com/pgsentinel/pgsentinel", rev = "fef77c8" }
+resolver = "pgxs"
+require_shared_preload_library = true
