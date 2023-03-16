@@ -15,14 +15,12 @@ This extensions will show all function address of hooks in the Postgres. To buil
 
 ```
 cargo install cargo-pgx@0.7.4 --locked
-cd pgx_show_hooks
-cargo pgx run pg15
+cargo run -- install-hook
 ```
 
 Then run SQL:
 
 ```
-
 CREATE EXTENSION pgx_show_hooks;
 SELECT * FROM show_hooks.all();
 DROP EXTENSION pgx_show_hooks;

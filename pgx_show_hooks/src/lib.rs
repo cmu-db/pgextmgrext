@@ -3,7 +3,13 @@ use pgx::prelude::*;
 pgx::pg_module_magic!();
 
 fn render_addr<T>(func: Option<*const T>) -> Option<String> {
-  func.map(|f| format!("{:16x}", f as usize))
+  func.and_then(|f| {
+    if f.is_null() {
+      None
+    } else {
+      Some(format!("{:16x}", f as usize))
+    }
+  })
 }
 
 #[pg_extern]
@@ -19,12 +25,12 @@ macro_rules! for_all_hooks {
       shmem_startup_hook,
 
       // Security Hooks
-      // check_password_hook,
+      check_password_hook,
       // ClientAuthentication_hook,
       ExecutorCheckPerms_hook,
-      // object_access_hook,
-      // row_security_policy_hook_permissive,
-      // row_security_policy_hook_restrictive,
+      object_access_hook,
+      row_security_policy_hook_permissive,
+      row_security_policy_hook_restrictive,
 
       // Function Manager Hooks
       needs_fmgr_hook,
@@ -35,7 +41,7 @@ macro_rules! for_all_hooks {
       ExplainOneQuery_hook,
       get_attavgwidth_hook,
       get_index_stats_hook,
-      // get_relation_info_hook,
+      get_relation_info_hook,
       get_relation_stats_hook,
       planner_hook,
       join_search_hook,
@@ -50,13 +56,6 @@ macro_rules! for_all_hooks {
       ExecutorFinish_hook,
       ExecutorEnd_hook,
       ProcessUtility_hook,
-
-      // PL/pgsql Hooks
-      // func_setup,
-      // func_beg,
-      // func_end,
-      // stmt_beg,
-      // stmt_end,
     }
   };
 }
@@ -75,5 +74,56 @@ fn all() -> TableIterator<'static, (name!(name, String), name!(addr, Option<Stri
     };
   }
   for_all_hooks! { push_hook }
+
+  unsafe {
+    let name = std::ffi::CString::new("PLpgSQL_plugin").unwrap();
+    let pgsql_plugin_ptr = pg_sys::find_rendezvous_variable(name.as_ptr()) as *const *const pg_sys::PLpgSQL_plugin;
+    let pgsql_plugin_ptr = *pgsql_plugin_ptr;
+    hooks.push((
+      "PLpgSQL_plugin".to_string(),
+      render_addr(Some(pgsql_plugin_ptr as *const _)),
+    ));
+    hooks.push((
+      "PLpgSQL_plugin->func_setup".to_string(),
+      render_addr(
+        pgsql_plugin_ptr
+          .as_ref()
+          .and_then(|x| x.func_setup.map(|f| f as *const ())),
+      ),
+    ));
+    hooks.push((
+      "PLpgSQL_plugin->func_beg".to_string(),
+      render_addr(
+        pgsql_plugin_ptr
+          .as_ref()
+          .and_then(|x| x.func_beg.map(|f| f as *const ())),
+      ),
+    ));
+    hooks.push((
+      "PLpgSQL_plugin->func_end".to_string(),
+      render_addr(
+        pgsql_plugin_ptr
+          .as_ref()
+          .and_then(|x| x.func_end.map(|f| f as *const ())),
+      ),
+    ));
+    hooks.push((
+      "PLpgSQL_plugin->stmt_beg".to_string(),
+      render_addr(
+        pgsql_plugin_ptr
+          .as_ref()
+          .and_then(|x| x.stmt_beg.map(|f| f as *const ())),
+      ),
+    ));
+    hooks.push((
+      "PLpgSQL_plugin->stmt_end".to_string(),
+      render_addr(
+        pgsql_plugin_ptr
+          .as_ref()
+          .and_then(|x| x.stmt_end.map(|f| f as *const ())),
+      ),
+    ));
+  }
+
   TableIterator::new(hooks.into_iter())
 }
