@@ -21,9 +21,7 @@ cargo run -- install-hook
 Then run SQL:
 
 ```
-CREATE EXTENSION pgx_show_hooks;
 SELECT * FROM show_hooks.all();
-DROP EXTENSION pgx_show_hooks;
 ```
 
 ## Test Hooks
