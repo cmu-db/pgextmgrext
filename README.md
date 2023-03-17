@@ -28,4 +28,5 @@ SELECT * FROM show_hooks.all();
 
 ```
 cargo run -- test pg_stat_statements
+cargo run -- test-all --dump-to result.csv
 ```

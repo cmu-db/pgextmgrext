@@ -499,6 +499,7 @@ dependencies = [
  "console",
  "duct",
  "num_cpus",
+ "pgext-hook-macros",
  "postgres",
  "regex",
  "serde",
@@ -506,6 +507,10 @@ dependencies = [
  "toml",
  "walkdir",
 ]
+
+[[package]]
+name = "pgext-hook-macros"
+version = "0.1.0"
 
 [[package]]
 name = "phf"

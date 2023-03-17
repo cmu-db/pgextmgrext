@@ -13,40 +13,40 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[command(subcommand)]
-    command: Commands,
+  #[command(subcommand)]
+  command: Commands,
 }
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    Init(CmdInit),
-    Install(CmdInstall),
-    InstallHook(CmdInstallHook),
-    InstallAll(CmdInstallAll),
-    List(CmdList),
-    Test(CmdTest),
-    TestAll(CmdTestAll),
+  Init(CmdInit),
+  Install(CmdInstall),
+  InstallHook(CmdInstallHook),
+  InstallAll(CmdInstallAll),
+  List(CmdList),
+  Test(CmdTest),
+  TestAll(CmdTestAll),
 }
 
 /// Init workspace
 #[derive(Parser, Debug)]
 pub struct CmdInit {
-    /// Path to `pg_config`
-    pg_config: String,
-    /// Directory that stores Postgres config and data
-    pg_data: String,
-    /// Source code contrib directory
-    pg_contrib: String,
+  /// Path to `pg_config`
+  pg_config: String,
+  /// Directory that stores Postgres config and data
+  pg_data: String,
+  /// Source code contrib directory
+  pg_contrib: String,
 }
 
 /// Install extension
 #[derive(Parser, Debug)]
 pub struct CmdInstall {
-    /// The name of the extension (in `plugindb.toml`)
-    name: String,
-    /// Enable verbose mode
-    #[clap(short, long)]
-    verbose: bool,
+  /// The name of the extension (in `plugindb.toml`)
+  name: String,
+  /// Enable verbose mode
+  #[clap(short, long)]
+  verbose: bool,
 }
 
 /// Install show_hooks extension
@@ -56,9 +56,9 @@ pub struct CmdInstallHook {}
 /// Install all extensions in plugindb
 #[derive(Parser, Debug)]
 pub struct CmdInstallAll {
-    /// Enable verbose mode
-    #[clap(short, long)]
-    verbose: bool,
+  /// Enable verbose mode
+  #[clap(short, long)]
+  verbose: bool,
 }
 
 /// List all extension in plugindb
@@ -68,38 +68,42 @@ pub struct CmdList {}
 /// Install extension
 #[derive(Parser, Debug)]
 pub struct CmdTest {
-    /// The name of the extension (in `plugindb.toml`)
-    name: String,
+  /// The name of the extension (in `plugindb.toml`)
+  name: String,
 }
 
 /// Install all extensions in plugindb
 #[derive(Parser, Debug)]
-pub struct CmdTestAll {}
+pub struct CmdTestAll {
+  /// Dump data to file
+  #[clap(long)]
+  dump_to: Option<String>,
+}
 
 fn main() -> Result<()> {
-    let args = Cli::parse();
-    match args.command {
-        Commands::Init(cmd) => {
-            cmd_init::cmd_init(cmd)?;
-        }
-        Commands::Install(cmd) => {
-            cmd_install::cmd_install(cmd)?;
-        }
-        Commands::InstallAll(cmd) => {
-            cmd_install::cmd_install_all(cmd)?;
-        }
-        Commands::List(_) => {
-            cmd_list::cmd_list()?;
-        }
-        Commands::Test(cmd) => {
-            cmd_test::cmd_test(cmd)?;
-        }
-        Commands::TestAll(cmd) => {
-            cmd_test::cmd_test_all(cmd)?;
-        }
-        Commands::InstallHook(_) => {
-            cmd_install::cmd_install_hook()?;
-        }
+  let args = Cli::parse();
+  match args.command {
+    Commands::Init(cmd) => {
+      cmd_init::cmd_init(cmd)?;
     }
-    Ok(())
+    Commands::Install(cmd) => {
+      cmd_install::cmd_install(cmd)?;
+    }
+    Commands::InstallAll(cmd) => {
+      cmd_install::cmd_install_all(cmd)?;
+    }
+    Commands::List(_) => {
+      cmd_list::cmd_list()?;
+    }
+    Commands::Test(cmd) => {
+      cmd_test::cmd_test(cmd)?;
+    }
+    Commands::TestAll(cmd) => {
+      cmd_test::cmd_test_all(cmd)?;
+    }
+    Commands::InstallHook(_) => {
+      cmd_install::cmd_install_hook()?;
+    }
+  }
+  Ok(())
 }
