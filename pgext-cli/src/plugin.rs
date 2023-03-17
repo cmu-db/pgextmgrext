@@ -9,6 +9,23 @@ pub struct GitDownload {
 }
 
 #[derive(Deserialize, Clone)]
+pub enum InstallStrategy {
+  /// Default install method, simply call create extension.
+  #[serde(rename = "install")]
+  Install,
+  /// Preload shared library
+  #[serde(rename = "preload")]
+  Preload,
+  /// First preload, then install
+  #[serde(rename = "preload+install")]
+  PreloadInstall,
+}
+
+fn default_install_strategy() -> InstallStrategy {
+  InstallStrategy::Install
+}
+
+#[derive(Deserialize, Clone)]
 pub struct Plugin {
   pub name: String,
   pub version: String,
@@ -20,8 +37,8 @@ pub struct Plugin {
   pub resolver: String,
   #[serde(default)]
   pub resolver_args: Vec<String>,
-  #[serde(default)]
-  pub require_shared_preload_library: bool,
+  #[serde(default = "default_install_strategy")]
+  pub install_strategy: InstallStrategy,
   #[serde(default)]
   pub dependencies: Vec<String>,
 }

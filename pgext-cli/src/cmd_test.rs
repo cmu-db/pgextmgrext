@@ -1,17 +1,16 @@
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write as _};
-use std::iter;
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use console::style;
 use duct::cmd;
+use pgext_hook_macros::for_all_hooks;
 use postgres::{Client, NoTls};
 
 use crate::config::load_workspace_config;
-use crate::plugin::load_plugin_db;
+use crate::plugin::{load_plugin_db, InstallStrategy};
 use crate::{CmdTest, CmdTestAll};
-use pgext_hook_macros::for_all_hooks;
 
 pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   let db = load_plugin_db()?;
@@ -92,7 +91,7 @@ pub fn cmd_test(cmd: CmdTest) -> Result<Vec<String>> {
     let mut new_pgconf = String::new();
     for line in pgconf.lines() {
       if line.starts_with("shared_preload_libraries = ") {
-        if plugin.require_shared_preload_library {
+        if let InstallStrategy::Preload | InstallStrategy::PreloadInstall = plugin.install_strategy {
           writeln!(
             new_pgconf,
             "shared_preload_libraries = '{}' # modified by pgext",
@@ -137,8 +136,12 @@ pub fn cmd_test(cmd: CmdTest) -> Result<Vec<String>> {
 
   client.execute("CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;", &[])?;
 
-  for extname in plugin.dependencies.iter().chain(iter::once(&plugin.name)) {
+  for extname in plugin.dependencies.iter() {
     client.execute(&format!("CREATE EXTENSION IF NOT EXISTS {};", extname), &[])?;
+  }
+
+  if let InstallStrategy::Install | InstallStrategy::PreloadInstall = plugin.install_strategy {
+    client.execute(&format!("CREATE EXTENSION IF NOT EXISTS {};", plugin.name), &[])?;
   }
 
   let rows = client.query("SELECT * FROM show_hooks.all();", &[])?;
@@ -153,7 +156,11 @@ pub fn cmd_test(cmd: CmdTest) -> Result<Vec<String>> {
     }
   }
 
-  for extname in plugin.dependencies.iter().chain(iter::once(&plugin.name)).rev() {
+  if let InstallStrategy::Install | InstallStrategy::PreloadInstall = plugin.install_strategy {
+    client.execute(&format!("DROP EXTENSION {};", plugin.name), &[])?;
+  }
+
+  for extname in plugin.dependencies.iter().rev() {
     client.execute(&format!("DROP EXTENSION {};", extname), &[])?;
   }
 
