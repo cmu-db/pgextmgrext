@@ -117,7 +117,7 @@ resolver = "pgx"
 # version = "1.0.0"
 # download_url_tar = "https://github.com/RekGRpth/pg_task/archive/refs/tags/v1.0.0.tar.gz"
 # resolver = "pgxs"
-# require_shared_preload_library = true
+# install_strategy = "preload+install"
 
 
 # TODO(yuchen): some clang warnings, but build successfully
@@ -126,54 +126,54 @@ name = "plpgsql_check"
 version = "2.3.3"
 download_url_tar = "https://github.com/okbob/plpgsql_check/archive/refs/tags/v2.3.3.tar.gz"
 resolver = "pgxs"
-require_shared_preload_library = true
+install_strategy = "preload+install"
 
 
 # TODO(yuchen): Error - conflicting types for 'pgqr_compare' (size_t, uint64_t error)
-# [[plugins]]
-# name = "pg_query_rewrite"
-# version = "3d4c2e33c59edd577eb7568bb8a9e396a2d1915b"
-# download_url_tar = "https://github.com/pierreforstmann/pg_query_rewrite/archive/3d4c2e33c59edd577eb7568bb8a9e396a2d1915b.tar.gz"
-# resolver = "pgxs"
-# require_shared_preload_library = true
+[[plugins]]
+name = "pg_query_rewrite"
+version = "3d4c2e33c59edd577eb7568bb8a9e396a2d1915b"
+download_url_tar = "https://github.com/pierreforstmann/pg_query_rewrite/archive/3d4c2e33c59edd577eb7568bb8a9e396a2d1915b.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
 
 [[plugins]]
 name = "hll"
 version = "8b9821c9f7a4674cb64db977a6c89f4381d0c0d0"
 download_git = { url = "https://github.com/citusdata/postgresql-hll", rev = "8b9821c" }
 resolver = "pgxs"
-require_shared_preload_library = true
+install_strategy = "preload+install"
 
 # TODO(yuchen): Error - Failed to resolve extension name
-# [[plugins]]
-# name = "pg_auto_failover"
-# version = "dc395982d816270ccb0c75b037f5f0f6f404e8d8"
-# download_git = { url = "https://github.com/citusdata/pg_auto_failover", rev = "dc39598" }
-# resolver = "pgxs"
-# require_shared_preload_library = true
+[[plugins]]
+name = "pg_auto_failover"
+version = "dc395982d816270ccb0c75b037f5f0f6f404e8d8"
+download_git = { url = "https://github.com/citusdata/pg_auto_failover", rev = "dc39598" }
+resolver = "pgxs"
+install_strategy = "preload+install"
 
 [[plugins]]
 name = "hypopg"
 version = "e7d1fea516626e752e2143bab6ebe665bc812378"
 download_git = { url = "https://github.com/HypoPG/hypopg", rev = "e7d1fea" }
 resolver = "pgxs"
-require_shared_preload_library = true
+install_strategy = "preload+install"
+
 
 # TODO(yuchen): Error - Failed to resolve extension name
-# [[plugins]]
-# name = "pgextwlist"
-# version = "bee26b7e92e2d65a17e9ef26ba5803f50ff6987c"
-# download_git = { url = "https://github.com/dimitri/pgextwlist", rev = "bee26b7" }
-# resolver = "pgxs"
-# require_shared_preload_library = true
-
+[[plugins]]
+name = "pgextwlist"
+version = "bee26b7e92e2d65a17e9ef26ba5803f50ff6987c"
+download_git = { url = "https://github.com/dimitri/pgextwlist", rev = "bee26b7" }
+resolver = "pgxs"
+install_strategy = "preload+install"
 
 [[plugins]]
 name = "imcs"
 version = "2e73bdffbde734f3fac51ec2f71a37602d4f688f"
 download_git = { url = "https://github.com/knizhnik/imcs", rev = "2e73bdf" }
 resolver = "pgxs"
-require_shared_preload_library = true
+install_strategy = "preload+install"
 
 
 [[plugins]]
@@ -181,4 +181,137 @@ name = "pgsentinel"
 version = "fef77c8ae8061b22f12fc33872216eda5f10edc2"
 download_git = { url = "https://github.com/pgsentinel/pgsentinel", rev = "fef77c8" }
 resolver = "pgxs"
-require_shared_preload_library = true
+install_strategy = "preload+install"
+
+
+[[plugins]]
+name = "vops"
+version = "808c78df94946f9b67809e3a3a933c35566ffa1d"
+download_git = { url = "https://github.com/postgrespro/vops", rev = "808c78d" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+# TODO(yuchen): aqo trying to patch postgres, see their README
+# [[plugins]]
+# name = "aqo"
+# version = "2cc67102ced20eb43e8c0ccdd4a2186169e68772"
+# download_git = { url = "https://github.com/postgrespro/aqo", rev = "2cc6710" }
+# resolver = "pgxs"
+# install_strategy = "preload+install"
+
+[[plugins]]
+name = "dont_drop_db"
+version = "9d8010aab30f37428caf45b430a644393cac51f4"
+download_git = { url = "https://github.com/s-hironobu/dont_drop_db", rev = "9d8010a" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_variables"
+version = "83b5759fbf8e187023b1bca2a4b11f6509cc1d0efbf8e187023b1bca2a4b11f6509cc1d0e"
+download_git = { url = "https://github.com/postgrespro/pg_variables", rev = "83b5759" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "shared_ispell"
+version = "82e0e10d04906ee0c7a906da27d99b658face22a"
+download_git = { url = "https://github.com/postgrespro/shared_ispell", rev = "82e0e10" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_wait_sampling"
+version = "c6ae0dd43220afc12c5eec80ad349e6896eaac8e"
+download_git = { url = "https://github.com/postgrespro/pg_wait_sampling", rev = "c6ae0dd" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "lsm3"
+version = "3bac10420e7738ddbd78e0eea7e3967afdd35aac"
+download_git = { url = "https://github.com/postgrespro/lsm3", rev = "3bac104" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "logerrors"
+version = "2.1.2"
+download_url_tar = "https://github.com/munakoiso/logerrors/archive/refs/tags/v2.1.2.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_stat_kcache"
+version = "75f5c2cf5a51132eb44f30fa8356deca66051991"
+download_git = { url = "https://github.com/powa-team/pg_stat_kcache", rev = "75f5c2c" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_qualstats"
+version = "64caea703e93b685f3f22ae63be0793f290457bc"
+download_git = { url = "https://github.com/powa-team/pg_qualstats", rev = "64caea7" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+
+# cuda GPU
+# [[plugins]]
+# name = "pg_strom"
+# version = "374b1501e3b6b258fc4db27bd043179660a4b340"
+# download_git = { url = "https://github.com/heterodb/pg-strom", rev = "374b150" }
+# resolver = "pgxs"
+# install_strategy = "preload+install"
+
+
+[[plugins]]
+name = "pg_show_plans"
+version = "1.1.1"
+download_url_tar = "https://github.com/cybertec-postgresql/pg_show_plans/archive/refs/tags/v1.1.1.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_queryid"
+version = "7ea79d8a79c51c049b48d19364ce7b5502cdb7d9"
+download_git = { url = "https://github.com/rjuju/pg_queryid", rev = "7ea79d8" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_querylog"
+version = "f639adb6dc1686044b76d82139df1c3a49076053"
+download_git = { url = "https://github.com/adjust/pg_querylog", rev = "f639adb" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+
+# TODO(yuchen): linker error - ld: unknown option: --build-id 
+# [[plugins]]
+# name = "pg_store_plans"
+# version = "55c29918d2e3b256852cedb86800cbf1f5edf70e"
+# download_git = { url = "https://github.com/ossc-db/pg_store_plans", rev = "55c2991" }
+# resolver = "pgxs"
+# install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_statsinfo"
+version = "15.0"
+download_url_tar = "https://github.com/ossc-db/pg_statsinfo/archive/refs/tags/15.0.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_statsinfo"
+version = "15.0"
+download_url_tar = "https://github.com/ossc-db/pg_statsinfo/archive/refs/tags/15.0.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "set_user"
+version = "4.0.1"
+download_url_tar = "https://github.com/pgaudit/set_user/archive/refs/tags/REL4_0_1.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
