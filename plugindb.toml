@@ -315,3 +315,68 @@ version = "4.0.1"
 download_url_tar = "https://github.com/pgaudit/set_user/archive/refs/tags/REL4_0_1.tar.gz"
 resolver = "pgxs"
 install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_log_userqueries"
+version = "1.4.0"
+download_url_tar = "https://github.com/gleu/pg_log_userqueries/archive/refs/tags/v1.4.0.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "anon"
+version = "1.1.0"
+download_url_tar = "https://gitlab.com/dalibo/postgresql_anonymizer/-/archive/1.1.0/postgresql_anonymizer-1.1.0.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "passwordcheck"
+version = "0.0.0"
+resolver = "pgsrctree"
+no_download = true
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "sepgsql"
+version = "0.0.0"
+resolver = "pgsrctree"
+no_download = true
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_stat_monitor"
+version = "2.0.0"
+download_git = { url = "https://github.com/percona/pg_stat_monitor", rev = "1617f0d" }
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+# TODO(yuchen): Error - src/planid_parser.y:81.9-18: syntax error, unexpected identifier, expecting string
+# [[plugins]]
+# name = "pg_plan_inspector"
+# version = "c7b13850e4ef1524f8cf1688db9acf7e942edc91"
+# download_git = { url = "https://github.com/s-hironobu/pg_plan_inspector", rev = "c7b1385" }
+# resolver = "pgxs"
+# install_strategy = "preload+install"
+
+[[plugins]]
+name = "pgtt"
+version = "2.10"
+download_url_tar = "https://github.com/darold/pgtt/archive/refs/tags/v2.10.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
+
+# TODO(yuchen): diff patch
+# [[plugins]]
+# name = "spock"
+# version = "3.0.22"
+# download_url_tar = "https://github.com/pgEdge/spock/archive/refs/tags/v3.0.22.tar.gz"
+# resolver = "pgxs"
+# install_strategy = "preload+install"
+
+[[plugins]]
+name = "pg_ivm"
+version = "1.5.1"
+download_url_tar = "https://github.com/sraoss/pg_ivm/archive/refs/tags/v1.5.1.tar.gz"
+resolver = "pgxs"
+install_strategy = "preload+install"
