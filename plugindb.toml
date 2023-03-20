@@ -160,13 +160,12 @@ resolver = "pgxs"
 install_strategy = "preload+install"
 
 
-# TODO(yuchen): Error - Failed to resolve extension name
 [[plugins]]
 name = "pgextwlist"
 version = "bee26b7e92e2d65a17e9ef26ba5803f50ff6987c"
 download_git = { url = "https://github.com/dimitri/pgextwlist", rev = "bee26b7" }
 resolver = "pgxs"
-install_strategy = "preload+install"
+install_strategy = "preload"
 
 [[plugins]]
 name = "imcs"
@@ -303,13 +302,6 @@ resolver = "pgxs"
 install_strategy = "preload+install"
 
 [[plugins]]
-name = "pg_statsinfo"
-version = "15.0"
-download_url_tar = "https://github.com/ossc-db/pg_statsinfo/archive/refs/tags/15.0.tar.gz"
-resolver = "pgxs"
-install_strategy = "preload+install"
-
-[[plugins]]
 name = "set_user"
 version = "4.0.1"
 download_url_tar = "https://github.com/pgaudit/set_user/archive/refs/tags/REL4_0_1.tar.gz"
@@ -321,7 +313,7 @@ name = "pg_log_userqueries"
 version = "1.4.0"
 download_url_tar = "https://github.com/gleu/pg_log_userqueries/archive/refs/tags/v1.4.0.tar.gz"
 resolver = "pgxs"
-install_strategy = "preload+install"
+install_strategy = "preload"
 
 [[plugins]]
 name = "anon"
@@ -329,13 +321,14 @@ version = "1.1.0"
 download_url_tar = "https://gitlab.com/dalibo/postgresql_anonymizer/-/archive/1.1.0/postgresql_anonymizer-1.1.0.tar.gz"
 resolver = "pgxs"
 install_strategy = "preload+install"
+dependencies = ["pgcrypto"]
 
 [[plugins]]
 name = "passwordcheck"
 version = "0.0.0"
 resolver = "pgsrctree"
 no_download = true
-install_strategy = "preload+install"
+install_strategy = "preload"
 
 [[plugins]]
 name = "sepgsql"

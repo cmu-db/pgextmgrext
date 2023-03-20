@@ -16,6 +16,7 @@ use crate::{CmdTest, CmdTestAll};
 
 pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   let db = load_plugin_db()?;
+  let mut failed = vec![];
 
   let all_hooks = {
     let mut all_hooks = vec![];
@@ -86,16 +87,24 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
           f.flush()?;
         }
       }
-      Err(e) => pbar.println(format!(
-        "{}: {} {}",
-        style("Error").red().bold(),
-        style(&plugin.name).bold(),
-        e
-      )),
+      Err(e) => {
+        pbar.println(format!(
+          "{}: {} {}",
+          style("Error").red().bold(),
+          style(&plugin.name).bold(),
+          e
+        ));
+        failed.push(plugin.name.clone());
+      }
     }
     pbar.inc(1);
   }
   pbar.finish_with_message("Done");
+
+  if !failed.is_empty() {
+    println!("{}: {}", style("Failed to test").red().bold(), failed.join(", "));
+  }
+
   Ok(())
 }
 
