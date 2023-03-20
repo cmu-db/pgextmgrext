@@ -1,5 +1,5 @@
+use pgext_hook_macros::{for_all_hooks, for_all_plpgsql_hooks};
 use pgx::prelude::*;
-use pgext_hook_macros::for_all_hooks;
 
 pgx::pg_module_magic!();
 
@@ -37,50 +37,28 @@ fn all() -> TableIterator<'static, (name!(name, String), name!(addr, Option<Stri
     let name = std::ffi::CString::new("PLpgSQL_plugin").unwrap();
     let pgsql_plugin_ptr = pg_sys::find_rendezvous_variable(name.as_ptr()) as *const *const pg_sys::PLpgSQL_plugin;
     let pgsql_plugin_ptr = *pgsql_plugin_ptr;
+
     hooks.push((
       "PLpgSQL_plugin".to_string(),
       render_addr(Some(pgsql_plugin_ptr as *const _)),
     ));
-    hooks.push((
-      "PLpgSQL_plugin->func_setup".to_string(),
-      render_addr(
-        pgsql_plugin_ptr
-          .as_ref()
-          .and_then(|x| x.func_setup.map(|f| f as *const ())),
-      ),
-    ));
-    hooks.push((
-      "PLpgSQL_plugin->func_beg".to_string(),
-      render_addr(
-        pgsql_plugin_ptr
-          .as_ref()
-          .and_then(|x| x.func_beg.map(|f| f as *const ())),
-      ),
-    ));
-    hooks.push((
-      "PLpgSQL_plugin->func_end".to_string(),
-      render_addr(
-        pgsql_plugin_ptr
-          .as_ref()
-          .and_then(|x| x.func_end.map(|f| f as *const ())),
-      ),
-    ));
-    hooks.push((
-      "PLpgSQL_plugin->stmt_beg".to_string(),
-      render_addr(
-        pgsql_plugin_ptr
-          .as_ref()
-          .and_then(|x| x.stmt_beg.map(|f| f as *const ())),
-      ),
-    ));
-    hooks.push((
-      "PLpgSQL_plugin->stmt_end".to_string(),
-      render_addr(
-        pgsql_plugin_ptr
-          .as_ref()
-          .and_then(|x| x.stmt_end.map(|f| f as *const ())),
-      ),
-    ));
+
+    macro_rules! push_plpgsql_hook {
+      ($($hook:ident,)*) => {
+          $(
+            hooks.push((
+              format!("PLpgSQL_plugin->{}", stringify!($hook)),
+              render_addr(
+                pgsql_plugin_ptr
+                  .as_ref()
+                  .and_then(|x| x.$hook.map(|f| f as *const ())),
+              ),
+            ));
+          )*
+      };
+    }
+
+    for_all_plpgsql_hooks! { push_plpgsql_hook }
   }
 
   TableIterator::new(hooks.into_iter())

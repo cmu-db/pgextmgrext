@@ -96,7 +96,7 @@ fn main() -> Result<()> {
       cmd_list::cmd_list()?;
     }
     Commands::Test(cmd) => {
-      cmd_test::cmd_test(cmd)?;
+      cmd_test::cmd_test(cmd, None)?;
     }
     Commands::TestAll(cmd) => {
       cmd_test::cmd_test_all(cmd)?;
