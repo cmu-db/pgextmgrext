@@ -86,11 +86,16 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
           f.flush()?;
         }
       }
-      Err(e) => println!("{}: {}", style("Error").red().bold(), e),
+      Err(e) => pbar.println(format!(
+        "{}: {} {}",
+        style("Error").red().bold(),
+        style(&plugin.name).bold(),
+        e
+      )),
     }
     pbar.inc(1);
   }
-  pbar.finish();
+  pbar.finish_with_message("Done");
   Ok(())
 }
 
