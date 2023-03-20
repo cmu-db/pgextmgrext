@@ -373,3 +373,10 @@ version = "1.5.1"
 download_url_tar = "https://github.com/sraoss/pg_ivm/archive/refs/tags/v1.5.1.tar.gz"
 resolver = "pgxs"
 install_strategy = "preload+install"
+
+[[plugins]]
+name = "pgx_trace_hooks"
+version = "0.0.0"
+no_download = true
+resolver = "pgsrctree"
+install_strategy = "preload+install"

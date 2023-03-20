@@ -113,10 +113,19 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
 
 pub fn cmd_install_hook() -> Result<()> {
   let config = load_workspace_config()?;
-  println!("{} {}", style("Building").blue().bold(), style("pgx_show_hooks").bold());
 
+  println!("{} {}", style("Building").blue().bold(), style("pgx_show_hooks").bold());
   cmd!("cargo", "pgx", "install", "-c", &config.pg_config)
     .dir("pgx_show_hooks")
+    .run()?;
+
+  println!(
+    "{} {}",
+    style("Building").blue().bold(),
+    style("pgx_trace_hooks").bold()
+  );
+  cmd!("cargo", "pgx", "install", "-c", &config.pg_config)
+    .dir("pgx_trace_hooks")
     .run()?;
 
   cmd!("cargo", "pgx", "start", "pg15").dir("pgx_show_hooks").run()?;

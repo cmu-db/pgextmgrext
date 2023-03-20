@@ -159,11 +159,20 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     std::fs::write(conf, new_pgconf)?;
   }
 
-  cmd!("cargo", "pgx", "start", "pg15")
+  let output = cmd!("cargo", "pgx", "start", "pg15")
     .dir("pgx_show_hooks")
-    .stderr_null()
-    .stdout_null()
+    .stderr_to_stdout()
+    .stdout_capture()
+    .unchecked()
     .run()?;
+
+  if !output.status.success() {
+    println!("{}", std::str::from_utf8(&output.stdout)?);
+    let log = home::home_dir().unwrap().join(".pgx").join("15.log"); // TODO: pgx should support this
+    cmd!("tail", "-n", "50", log).run()?;
+    return Err(anyhow::anyhow!("Failed to start pg15"));
+  }
+
   let whoami = cmd!("whoami").read()?;
   let mut client = Client::connect(
     &format!("host=localhost dbname=postgres user={} port=28815", whoami.trim()),
