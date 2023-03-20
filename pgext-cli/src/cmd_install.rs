@@ -18,12 +18,24 @@ fn create_workdir() -> Result<PathBuf> {
 
 pub fn cmd_install_all(cmd: CmdInstallAll) -> Result<()> {
   let db = load_plugin_db()?;
+  let mut failed = vec![];
   for (idx, plugin) in db.plugins.iter().enumerate() {
     println!("{}/{}", idx + 1, db.plugins.len());
-    cmd_install(CmdInstall {
+    if let Err(err) = cmd_install(CmdInstall {
       name: plugin.name.clone(),
       verbose: cmd.verbose,
-    })?;
+    }) {
+      println!(
+        "{}: {} {}",
+        style("Error").red().bold(),
+        style(&plugin.name).bold(),
+        err
+      );
+      failed.push(plugin.name.clone());
+    }
+  }
+  if !failed.is_empty() {
+    println!("{}: {}", style("Failed to install").red().bold(), failed.join(", "));
   }
   Ok(())
 }
