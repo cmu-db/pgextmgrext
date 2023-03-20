@@ -41,3 +41,16 @@ macro_rules! for_all_hooks {
     }
   };
 }
+
+#[macro_export]
+macro_rules! for_all_plpgsql_hooks {
+  ($macro:ident) => {
+    $macro! {
+      func_setup,
+      func_beg,
+      func_end,
+      stmt_beg,
+      stmt_end,
+    }
+  };
+}
