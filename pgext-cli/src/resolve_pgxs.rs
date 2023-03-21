@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use console::style;
@@ -37,68 +37,80 @@ fn patch_makefile(content: &str, patch: &str) -> Result<String> {
 }
 
 pub fn resolve_build_pgxs(plugin: &Plugin, build_dir: &Path, pg_config: &str, verbose: bool) -> Result<()> {
+  let mut final_path: Option<PathBuf> = None;
   for entry in WalkDir::new(build_dir) {
     let entry = entry?;
     let path = entry.path();
     if let Some(fname) = path.file_name() {
       if fname == "Makefile" {
         println!("Found Makefile at {}", path.display());
-        let parent = path.parent().unwrap();
-
-        if parent.join("configure").exists() && !parent.join("config.status").exists() {
-          println!(
-            "{} {}",
-            style("Configure").bold().blue(),
-            plugin.resolver_args.join(" ")
-          );
-
-          let cmd = duct::cmd(parent.join("configure"), plugin.resolver_args.iter());
-          let cmd = if verbose { cmd } else { cmd.stderr_null().stdout_null() };
-          cmd.dir(parent).run().context("failed to configure")?;
-        }
-
-        let pg_config = format!("PG_CONFIG={}", pg_config);
-
-        let ext_name = match parse_pgxs_makefile(path, &pg_config) {
-          Ok(ext_name) => {
-            if ext_name != plugin.name {
-              return Err(anyhow!(
-                "Extension name {} doesn't match with plugindb {}",
-                ext_name,
-                plugin.name
-              ));
-            }
-            ext_name
+        if let Some(final_path) = final_path.as_mut() {
+          let new_path = path.parent().unwrap();
+          if final_path.starts_with(new_path) {
+            *final_path = new_path.to_path_buf();
           }
-          Err(err) => {
-            println!("{err}");
-            plugin.name.to_string()
-          }
-        };
-
-        println!("{} {}", style("Building").bold().blue(), ext_name);
-
-        let num_cpus = num_cpus::get().to_string();
-
-        if verbose {
-          cmd!("make", "USE_PGXS=1", &pg_config, "-j", num_cpus)
         } else {
-          cmd!("make", "USE_PGXS=1", &pg_config, "-j", num_cpus, "-s")
+          final_path = Some(path.parent().unwrap().to_path_buf());
         }
-        .dir(parent)
-        .run()
-        .context("failed to make")?;
-        if verbose {
-          cmd!("make", "USE_PGXS=1", &pg_config, "install")
-        } else {
-          cmd!("make", "USE_PGXS=1", &pg_config, "install", "-s")
-        }
-        .dir(parent)
-        .run()
-        .context("failed to install")?;
-        return Ok(());
       }
     }
   }
-  Err(anyhow!("Could not find PGXS Makefile in build dir"))
+
+  if let Some(parent) = final_path {
+    if parent.join("configure").exists() && !parent.join("config.status").exists() {
+      println!(
+        "{} {}",
+        style("Configure").bold().blue(),
+        plugin.resolver_args.join(" ")
+      );
+
+      let cmd = duct::cmd(parent.join("configure"), plugin.resolver_args.iter());
+      let cmd = if verbose { cmd } else { cmd.stderr_null().stdout_null() };
+      cmd.dir(&parent).run().context("failed to configure")?;
+    }
+
+    let pg_config = format!("PG_CONFIG={}", pg_config);
+
+    let path = parent.join("Makefile");
+    let ext_name = match parse_pgxs_makefile(&path, &pg_config) {
+      Ok(ext_name) => {
+        if ext_name != plugin.name {
+          return Err(anyhow!(
+            "Extension name {} doesn't match with plugindb {}",
+            ext_name,
+            plugin.name
+          ));
+        }
+        ext_name
+      }
+      Err(err) => {
+        println!("{err}");
+        plugin.name.to_string()
+      }
+    };
+
+    println!("{} {}", style("Building").bold().blue(), ext_name);
+
+    let num_cpus = num_cpus::get().to_string();
+
+    if verbose {
+      cmd!("make", "USE_PGXS=1", &pg_config, "-j", num_cpus)
+    } else {
+      cmd!("make", "USE_PGXS=1", &pg_config, "-j", num_cpus, "-s")
+    }
+    .dir(&parent)
+    .run()
+    .context("failed to make")?;
+    if verbose {
+      cmd!("make", "USE_PGXS=1", &pg_config, "install")
+    } else {
+      cmd!("make", "USE_PGXS=1", &pg_config, "install", "-s")
+    }
+    .dir(&parent)
+    .run()
+    .context("failed to install")?;
+    Ok(())
+  } else {
+    Err(anyhow!("Could not find PGXS Makefile in build dir"))
+  }
 }

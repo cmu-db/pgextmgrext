@@ -136,6 +136,7 @@ version = "3d4c2e33c59edd577eb7568bb8a9e396a2d1915b"
 download_url_tar = "https://github.com/pierreforstmann/pg_query_rewrite/archive/3d4c2e33c59edd577eb7568bb8a9e396a2d1915b.tar.gz"
 resolver = "pgxs"
 install_strategy = "preload+install"
+platform = ["Linux"]
 
 [[plugins]]
 name = "hll"
@@ -246,6 +247,7 @@ version = "75f5c2cf5a51132eb44f30fa8356deca66051991"
 download_git = { url = "https://github.com/powa-team/pg_stat_kcache", rev = "75f5c2c" }
 resolver = "pgxs"
 install_strategy = "preload+install"
+dependencies = ["pg_stat_statements"]
 
 [[plugins]]
 name = "pg_qualstats"
@@ -300,6 +302,7 @@ version = "15.0"
 download_url_tar = "https://github.com/ossc-db/pg_statsinfo/archive/refs/tags/15.0.tar.gz"
 resolver = "pgxs"
 install_strategy = "preload+install"
+platform = ["Linux"]
 
 [[plugins]]
 name = "set_user"
@@ -336,6 +339,7 @@ version = "0.0.0"
 resolver = "pgsrctree"
 no_download = true
 install_strategy = "preload+install"
+platform = ["Linux"]
 
 [[plugins]]
 name = "pg_stat_monitor"
@@ -357,7 +361,7 @@ name = "pgtt"
 version = "2.10"
 download_url_tar = "https://github.com/darold/pgtt/archive/refs/tags/v2.10.tar.gz"
 resolver = "pgxs"
-install_strategy = "preload+install"
+install_strategy = "load+install"
 
 # TODO(yuchen): diff patch
 # [[plugins]]
@@ -372,7 +376,7 @@ name = "pg_ivm"
 version = "1.5.1"
 download_url_tar = "https://github.com/sraoss/pg_ivm/archive/refs/tags/v1.5.1.tar.gz"
 resolver = "pgxs"
-install_strategy = "preload+install"
+install_strategy = "install"
 
 [[plugins]]
 name = "pgx_trace_hooks"
