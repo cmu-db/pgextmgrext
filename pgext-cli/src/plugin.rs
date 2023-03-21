@@ -19,6 +19,12 @@ pub enum InstallStrategy {
   /// First preload, then install
   #[serde(rename = "preload+install")]
   PreloadInstall,
+  /// load in session shared libraries, then install
+  #[serde(rename = "load+install")]
+  LoadInstall,
+  /// load in session shared libraries
+  #[serde(rename = "load")]
+  Load,
 }
 
 fn default_install_strategy() -> InstallStrategy {

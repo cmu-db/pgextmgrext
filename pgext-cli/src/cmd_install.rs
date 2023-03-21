@@ -143,6 +143,9 @@ pub fn cmd_install_hook() -> Result<()> {
   client.execute("DROP EXTENSION IF EXISTS pgx_show_hooks;", &[])?;
   client.execute("CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;", &[])?;
 
+  println!("{}: setting your user as a superuser", style("Configure").blue().bold(),);
+  client.execute(&format!("ALTER USER {} WITH SUPERUSER;", whoami), &[])?;
+
   cmd!("cargo", "pgx", "stop", "pg15").dir("pgx_show_hooks").run()?;
 
   println!(

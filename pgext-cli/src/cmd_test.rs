@@ -3,7 +3,7 @@ use std::io::{BufWriter, Write as _};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use console::style;
 use duct::cmd;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -152,6 +152,10 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
         } else {
           writeln!(new_pgconf, "shared_preload_libraries = ''  # modified by pgext")?;
         }
+      } else if line.starts_with("session_preload_libraries = ") || line.starts_with("#session_preload_libraries = ") {
+        writeln!(new_pgconf, "session_preload_libraries = ''  # modified by pgext")?;
+      } else if line.starts_with("local_preload_libraries = ") || line.starts_with("#local_preload_libraries = ") {
+        writeln!(new_pgconf, "local_preload_libraries = ''  # modified by pgext")?;
       } else {
         writeln!(new_pgconf, "{}", line)?;
       }
@@ -178,8 +182,15 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     &format!("host=localhost dbname=postgres user={} port=28815", whoami.trim()),
     NoTls,
   )?;
+
   let result = client.query_one("SHOW shared_preload_libraries;", &[])?;
   println(format!("shared_preload_libraries: {}", result.get::<_, String>(0)));
+
+  let result = client.query_one("SHOW session_preload_libraries;", &[])?;
+  println(format!("session_preload_libraries: {}", result.get::<_, String>(0)));
+
+  let result = client.query_one("SHOW local_preload_libraries;", &[])?;
+  println(format!("local_preload_libraries: {}", result.get::<_, String>(0)));
 
   let result = client.query("SELECT extname, extversion FROM pg_extension;", &[])?;
   for x in result.iter() {
@@ -206,8 +217,16 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     client.execute(&format!("CREATE EXTENSION IF NOT EXISTS {};", extname), &[])?;
   }
 
-  if let InstallStrategy::Install | InstallStrategy::PreloadInstall = plugin.install_strategy {
+  if let InstallStrategy::Install | InstallStrategy::PreloadInstall | InstallStrategy::LoadInstall =
+    plugin.install_strategy
+  {
     client.execute(&format!("CREATE EXTENSION IF NOT EXISTS {};", plugin.name), &[])?;
+  }
+
+  if let InstallStrategy::LoadInstall | InstallStrategy::Load = plugin.install_strategy {
+    client
+      .execute(&format!("LOAD '{}';", plugin.name), &[])
+      .context("... when load extension")?;
   }
 
   let rows = client.query("SELECT * FROM show_hooks.all();", &[])?;
@@ -222,12 +241,21 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     }
   }
 
-  if let InstallStrategy::Install | InstallStrategy::PreloadInstall = plugin.install_strategy {
-    client.execute(&format!("DROP EXTENSION {};", plugin.name), &[])?;
+  if let InstallStrategy::Install | InstallStrategy::PreloadInstall | InstallStrategy::LoadInstall =
+    plugin.install_strategy
+  {
+    if let Err(e) = client
+      .execute(&format!("DROP EXTENSION {};", plugin.name), &[])
+      .context("when drop extension")
+    {
+      println(format!("{}: {}", style("Error").red().bold(), e));
+    }
   }
 
   for extname in plugin.dependencies.iter().rev() {
-    client.execute(&format!("DROP EXTENSION {};", extname), &[])?;
+    client
+      .execute(&format!("DROP EXTENSION {};", extname), &[])
+      .context("when drop dependent extension")?;
   }
 
   cmd!("cargo", "pgx", "stop", "pg15")
