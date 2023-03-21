@@ -142,7 +142,7 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     let pgconf = std::fs::read_to_string(&conf)?;
     let mut new_pgconf = String::new();
     for line in pgconf.lines() {
-      if line.starts_with("shared_preload_libraries = ") {
+      if line.starts_with("shared_preload_libraries = ") || line.starts_with("#shared_preload_libraries = ") {
         if let InstallStrategy::Preload | InstallStrategy::PreloadInstall = plugin.install_strategy {
           writeln!(
             new_pgconf,
