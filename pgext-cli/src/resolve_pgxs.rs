@@ -36,7 +36,7 @@ fn patch_makefile(content: &str, patch: &str) -> Result<String> {
   }
 }
 
-pub fn resolve_build_pgxs(plugin: &Plugin, build_dir: &Path, pg_config: &str, verbose: bool) -> Result<()> {
+pub fn find_pgxs_path(build_dir: &Path) -> Result<Option<PathBuf>> {
   let mut final_path: Option<PathBuf> = None;
   for entry in WalkDir::new(build_dir) {
     let entry = entry?;
@@ -55,6 +55,35 @@ pub fn resolve_build_pgxs(plugin: &Plugin, build_dir: &Path, pg_config: &str, ve
       }
     }
   }
+  Ok(final_path)
+}
+
+pub fn pgxs_install_check(plugin: &Plugin, build_dir: &Path, pg_config: &str) -> Result<()> {
+  let pg_host = home::home_dir().unwrap().join(".pgx");
+  let final_path = if plugin.resolver.as_str() != "pgsrctree" {
+    find_pgxs_path(build_dir)?
+  } else {
+    Some(pg_host.join("15.2/contrib").join(plugin.name.clone()))
+  };
+
+  println!("{} {}", style("Regression Testing").bold().blue(), plugin.name);
+  if let Some(parent) = final_path {
+    let pg_config = format!("PG_CONFIG={}", pg_config);
+    let whoami = cmd!("whoami").read()?;
+    let pg_user = format!("PG_USER={}", whoami.trim());
+    let pg_host = format!("PGHOST={}", pg_host.to_str().unwrap());
+    cmd!("make", "-B", "USE_PGXS=1", pg_user, pg_config, pg_host, "installcheck")
+      .dir(parent)
+      .run()
+      .context("installcheck failed")?;
+    Ok(())
+  } else {
+    Err(anyhow!("Could not find PGXS Makefile in build dir"))
+  }
+}
+
+pub fn resolve_build_pgxs(plugin: &Plugin, build_dir: &Path, pg_config: &str, verbose: bool) -> Result<()> {
+  let final_path: Option<PathBuf> = find_pgxs_path(build_dir)?;
 
   if let Some(parent) = final_path {
     if parent.join("configure").exists() && !parent.join("config.status").exists() {

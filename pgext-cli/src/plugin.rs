@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
@@ -58,4 +60,24 @@ pub fn load_plugin_db() -> Result<PluginDb> {
   let plugindb = std::fs::read_to_string("plugindb.toml").context("Failed to open plugindb.toml")?;
   let plugindb: PluginDb = toml::from_str(&plugindb).context("Failed to parse plugindb.toml")?;
   Ok(plugindb)
+}
+
+/// Collects all unique shared preload libraries in the dependency chain
+pub fn collect_shared_preload_libraries(db: &PluginDb, plugins: Vec<&Plugin>) -> Vec<String> {
+  fn collect_helper(db: &PluginDb, plugin: &Plugin, preloads: &mut HashSet<String>) {
+    for extname in plugin.dependencies.iter() {
+      let dep = db.plugins.iter().find(|x| &x.name == extname).unwrap().clone();
+      collect_helper(db, &dep, preloads);
+      if let InstallStrategy::Preload | InstallStrategy::PreloadInstall = dep.install_strategy {
+        preloads.insert(dep.name);
+      }
+    }
+  }
+  let mut preloads = HashSet::<String>::new();
+  for plugin in plugins.iter() {
+    collect_helper(db, plugin, &mut preloads);
+    preloads.insert(plugin.name.clone());
+  }
+
+  preloads.into_iter().collect::<Vec<String>>()
 }

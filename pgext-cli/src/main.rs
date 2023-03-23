@@ -70,6 +70,9 @@ pub struct CmdList {}
 pub struct CmdTest {
   /// The name of the extension (in `plugindb.toml`)
   name: String,
+  /// Run installchecks
+  #[clap(long)]
+  check: bool,
 }
 
 /// Install all extensions in plugindb
@@ -78,6 +81,8 @@ pub struct CmdTestAll {
   /// Dump data to file
   #[clap(long)]
   dump_to: Option<String>,
+  #[clap(long)]
+  check: bool,
 }
 
 fn main() -> Result<()> {

@@ -10,8 +10,10 @@ use indicatif::{ProgressBar, ProgressStyle};
 use pgext_hook_macros::{for_all_hooks, for_all_plpgsql_hooks};
 use postgres::{Client, NoTls};
 
+use crate::cmd_install::create_workdir;
 use crate::config::load_workspace_config;
-use crate::plugin::{load_plugin_db, InstallStrategy};
+use crate::plugin::{collect_shared_preload_libraries, load_plugin_db, InstallStrategy};
+use crate::resolve_pgxs::pgxs_install_check;
 use crate::{CmdTest, CmdTestAll};
 
 pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
@@ -70,6 +72,7 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
     match cmd_test(
       CmdTest {
         name: plugin.name.clone(),
+        check: cmd.check,
       },
       Some(pbar.clone()),
     ) {
@@ -144,10 +147,11 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     for line in pgconf.lines() {
       if line.starts_with("shared_preload_libraries = ") || line.starts_with("#shared_preload_libraries = ") {
         if let InstallStrategy::Preload | InstallStrategy::PreloadInstall = plugin.install_strategy {
+          let preloads = collect_shared_preload_libraries(&db, vec![&plugin]);
           writeln!(
             new_pgconf,
             "shared_preload_libraries = '{}' # modified by pgext",
-            plugin.name
+            preloads.join(",")
           )?;
         } else {
           writeln!(new_pgconf, "shared_preload_libraries = ''  # modified by pgext")?;
@@ -256,6 +260,13 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     client
       .execute(&format!("DROP EXTENSION {};", extname), &[])
       .context("when drop dependent extension")?;
+  }
+
+  if cmd.check {
+    let name_tag = format!("{}@{}", plugin.name, plugin.version);
+    let workdir = create_workdir()?;
+    let build_dir = workdir.join("builds").join(&name_tag);
+    pgxs_install_check(&plugin, &build_dir, &config.pg_config).context("when running installcheck")?
   }
 
   cmd!("cargo", "pgx", "stop", "pg15")
