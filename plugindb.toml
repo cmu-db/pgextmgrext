@@ -11,6 +11,7 @@ version = "1.5.0"
 download_url_zip = "https://github.com/ossc-db/pg_hint_plan/archive/refs/tags/REL15_1_5_0.zip"
 resolver = "pgxs"
 install_strategy = "preload+install"
+dependencies = ["pg_stat_statements"]
 
 [[plugins]]
 name = "orafce"
@@ -66,6 +67,7 @@ name = "pgcrypto"
 version = "0.0.0"
 resolver = "pgsrctree"
 no_download = true
+install_strategy = "preload"
 
 [[plugins]]
 name = "pg_stat_statements"

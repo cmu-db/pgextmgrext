@@ -9,7 +9,7 @@ use crate::config::load_workspace_config;
 use crate::plugin::load_plugin_db;
 use crate::{CmdInstall, CmdInstallAll};
 
-fn create_workdir() -> Result<PathBuf> {
+pub fn create_workdir() -> Result<PathBuf> {
   std::fs::create_dir_all("pgextworkdir")?;
   std::fs::create_dir_all("pgextworkdir/downloads")?;
   std::fs::create_dir_all("pgextworkdir/builds")?;

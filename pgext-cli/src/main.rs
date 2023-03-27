@@ -6,6 +6,7 @@ mod config;
 mod download;
 mod plugin;
 mod resolve_pgxs;
+mod test_control;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
@@ -25,6 +26,7 @@ enum Commands {
   InstallAll(CmdInstallAll),
   List(CmdList),
   Test(CmdTest),
+  TestPair(CmdTestPair),
   TestAll(CmdTestAll),
 }
 
@@ -70,6 +72,21 @@ pub struct CmdList {}
 pub struct CmdTest {
   /// The name of the extension (in `plugindb.toml`)
   name: String,
+  /// Run installchecks
+  #[clap(long)]
+  check: bool,
+}
+
+/// Testing compatibility between two extensions
+#[derive(Parser, Debug)]
+pub struct CmdTestPair {
+  /// First extension name in plugindb
+  first: String,
+  /// Second extension name in plugindb
+  second: String,
+  /// Run installchecks
+  #[clap(long)]
+  check: bool,
 }
 
 /// Install all extensions in plugindb
@@ -78,6 +95,8 @@ pub struct CmdTestAll {
   /// Dump data to file
   #[clap(long)]
   dump_to: Option<String>,
+  #[clap(long)]
+  check: bool,
 }
 
 fn main() -> Result<()> {
@@ -97,6 +116,9 @@ fn main() -> Result<()> {
     }
     Commands::Test(cmd) => {
       cmd_test::cmd_test(cmd, None)?;
+    }
+    Commands::TestPair(cmd) => {
+      cmd_test::cmd_test_pair(cmd, None)?;
     }
     Commands::TestAll(cmd) => {
       cmd_test::cmd_test_all(cmd)?;
