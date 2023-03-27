@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
@@ -62,8 +62,16 @@ pub fn load_plugin_db() -> Result<PluginDb> {
   Ok(plugindb)
 }
 
+pub fn find_plugin(db: &PluginDb, name: &str) -> Result<Plugin> {
+  if let Some(plugin) = db.plugins.iter().find(|x| x.name == name) {
+    Ok(plugin.clone())
+  } else {
+    bail!("Plugin {} not found", name);
+  }
+}
+
 /// Collects all unique shared preload libraries in the dependency chain
-pub fn collect_shared_preload_libraries(db: &PluginDb, plugins: Vec<&Plugin>) -> Vec<String> {
+pub fn collect_shared_preload_libraries(db: &PluginDb, plugins: &Vec<&Plugin>) -> Vec<String> {
   fn collect_helper(db: &PluginDb, plugin: &Plugin, preloads: &mut HashSet<String>) {
     for extname in plugin.dependencies.iter() {
       let dep = db.plugins.iter().find(|x| &x.name == extname).unwrap().clone();
@@ -73,10 +81,13 @@ pub fn collect_shared_preload_libraries(db: &PluginDb, plugins: Vec<&Plugin>) ->
       }
     }
   }
+  // TODO(yuchen): this need to be ordered + unique (is there a linked hashmap)?
   let mut preloads = HashSet::<String>::new();
   for plugin in plugins.iter() {
     collect_helper(db, plugin, &mut preloads);
-    preloads.insert(plugin.name.clone());
+    if let InstallStrategy::Preload | InstallStrategy::PreloadInstall = plugin.install_strategy {
+      preloads.insert(plugin.name.clone());
+    }
   }
 
   preloads.into_iter().collect::<Vec<String>>()

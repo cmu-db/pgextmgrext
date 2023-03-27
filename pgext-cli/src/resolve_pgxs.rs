@@ -58,7 +58,29 @@ pub fn find_pgxs_path(build_dir: &Path) -> Result<Option<PathBuf>> {
   Ok(final_path)
 }
 
-pub fn pgxs_install_check(plugin: &Plugin, build_dir: &Path, pg_config: &str) -> Result<()> {
+/// Patch Makefile to load two extensions for regression tests
+fn pgxs_regress_load_extensions(path: &Path, extnames: Option<&Vec<String>>) -> Result<()> {
+  const REGRESS_OPTS: &str = "REGRESS_OPTS += --load-extension";
+  if let Some(names) = extnames {
+    // format!("{0} {1}\n{0} {2}\n", REGRESS_OPTS, first, other)
+    let patch = names
+      .iter()
+      .map(|name| format!("{} {:#?}\n", REGRESS_OPTS, name))
+      .collect::<Vec<String>>()
+      .join("\n");
+    std::fs::write(path, patch_makefile(&std::fs::read_to_string(path)?, &patch)?)?;
+  } else {
+    std::fs::write(path, patch_makefile(&std::fs::read_to_string(path)?, "")?)?;
+  }
+  Ok(())
+}
+
+pub fn pgxs_installcheck(
+  plugin: &Plugin,
+  other: Option<(&Plugin, &Vec<String>)>,
+  build_dir: &Path,
+  pg_config: &str,
+) -> Result<()> {
   let pg_host = home::home_dir().unwrap().join(".pgx");
   let final_path = if plugin.resolver.as_str() != "pgsrctree" {
     find_pgxs_path(build_dir)?
@@ -66,8 +88,10 @@ pub fn pgxs_install_check(plugin: &Plugin, build_dir: &Path, pg_config: &str) ->
     Some(pg_host.join("15.2/contrib").join(plugin.name.clone()))
   };
 
-  println!("{} {}", style("Regression Testing").bold().blue(), plugin.name);
   if let Some(parent) = final_path {
+    let path = parent.join("Makefile");
+    pgxs_regress_load_extensions(&path, other.map(|x| x.1))?;
+
     let pg_config = format!("PG_CONFIG={}", pg_config);
     let whoami = cmd!("whoami").read()?;
     let pg_user = format!("PG_USER={}", whoami.trim());
@@ -75,7 +99,10 @@ pub fn pgxs_install_check(plugin: &Plugin, build_dir: &Path, pg_config: &str) ->
     cmd!("make", "-B", "USE_PGXS=1", pg_user, pg_config, pg_host, "installcheck")
       .dir(parent)
       .run()
-      .context("installcheck failed")?;
+      .context(format!(
+        "error when running `make installcheck` on {}",
+        style(&plugin.name).bold()
+      ))?;
     Ok(())
   } else {
     Err(anyhow!("Could not find PGXS Makefile in build dir"))

@@ -1,20 +1,18 @@
-use std::fmt::Write as _;
 use std::io::{BufWriter, Write as _};
-use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::Result;
 use console::style;
-use duct::cmd;
 use indicatif::{ProgressBar, ProgressStyle};
 use pgext_hook_macros::{for_all_hooks, for_all_plpgsql_hooks};
-use postgres::{Client, NoTls};
+use postgres::Client;
 
 use crate::cmd_install::create_workdir;
-use crate::config::load_workspace_config;
-use crate::plugin::{collect_shared_preload_libraries, load_plugin_db, InstallStrategy};
-use crate::resolve_pgxs::pgxs_install_check;
-use crate::{CmdTest, CmdTestAll};
+use crate::config::{edit_pgconf, load_workspace_config};
+use crate::plugin::{find_plugin, load_plugin_db};
+use crate::resolve_pgxs::pgxs_installcheck;
+use crate::test_control::{pgx_start_pg15, pgx_stop_pg15, ExtTestControl};
+use crate::{CmdTest, CmdTestAll, CmdTestPair};
 
 pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   let db = load_plugin_db()?;
@@ -111,17 +109,121 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   Ok(())
 }
 
+pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
+  let db = load_plugin_db()?;
+  let config = load_workspace_config()?;
+  let first = find_plugin(&db, &cmd.first)?;
+  let second = find_plugin(&db, &cmd.second)?;
+
+  let println = |msg: String| {
+    if let Some(ref pbar) = pbar {
+      pbar.println(msg);
+    } else {
+      println!("{}", msg);
+    }
+  };
+
+  println(format!(
+    "{} {} {} {}",
+    style("Testing compatibility between").blue().bold(),
+    style(&first.name).bold(),
+    style("and").blue().bold(),
+    style(&second.name).bold()
+  ));
+
+  pgx_stop_pg15()?;
+
+  // Testing first,second
+  println(format!(
+    "{} {}, {}",
+    style("Checking order").blue().bold(),
+    style(&first.name).bold(),
+    style(&second.name).bold()
+  ));
+
+  let shared_preloads = edit_pgconf(&db, &config, &vec![&first, &second])?;
+  pgx_start_pg15()?;
+
+  let mut client = Client::connect_test_db()?;
+  client.show_preload_libraries(println)?;
+  client.handle_installed(println)?;
+  client.create_exn_if_absent("pgx_show_hooks")?;
+
+  client.create_exns_for(&first)?;
+  client.create_exns_for(&second)?;
+  let hooks = client.show_hooks_all(println)?;
+  client.drop_exns_for(&second, println)?;
+  client.drop_exns_for(&first, println)?;
+
+  if cmd.check {
+    let name_tag = format!("{}@{}", second.name, second.version);
+    let workdir = create_workdir()?;
+    let build_dir = workdir.join("builds").join(&name_tag);
+
+    println!("{} {}", style("Regression Testing").bold().blue(), second.name);
+
+    if let Err(err) = pgxs_installcheck(&second, Some((&first, &shared_preloads)), &build_dir, &config.pg_config) {
+      println(format!("{err}"));
+      println(format!(
+        "{} - {}",
+        style("Failed").bold().red(),
+        style(&second.name).bold()
+      ));
+    }
+  }
+  pgx_stop_pg15()?;
+
+  // Testing second,first
+  println(format!(
+    "{} {}{} {}",
+    style("Checking order").blue().bold(),
+    style(&second.name).bold(),
+    style(",").blue().bold(),
+    style(&first.name).bold()
+  ));
+
+  let shared_preloads = edit_pgconf(&db, &config, &vec![&second, &first])?;
+  pgx_start_pg15()?;
+
+  let mut client = Client::connect_test_db()?;
+  client.show_preload_libraries(println)?;
+  client.handle_installed(println)?;
+  client.create_exn_if_absent("pgx_show_hooks")?;
+
+  client.create_exns_for(&second)?;
+  client.create_exns_for(&first)?;
+  let hooks_rev = client.show_hooks_all(println)?;
+  client.drop_exns_for(&first, println)?;
+  client.drop_exns_for(&second, println)?;
+
+  if cmd.check {
+    let name_tag = format!("{}@{}", second.name, second.version);
+    let workdir = create_workdir()?;
+    let build_dir = workdir.join("builds").join(&name_tag);
+
+    println!("{} {}", style("Regression Testing").bold().blue(), second.name);
+
+    if let Err(err) = pgxs_installcheck(&first, Some((&second, &shared_preloads)), &build_dir, &config.pg_config) {
+      println(format!("{err}"));
+      println(format!(
+        "{} - {}",
+        style("Failed").bold().red(),
+        style(&first.name).bold()
+      ));
+    }
+  }
+
+  pgx_stop_pg15()?;
+  debug_assert_eq!(&hooks, &hooks_rev);
+  Ok(hooks)
+}
+
 pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
   let db = load_plugin_db()?;
   let config = load_workspace_config()?;
+  let plugin = find_plugin(&db, &cmd.name)?;
 
-  let plugin = if let Some(plugin) = db.plugins.iter().find(|x| x.name == cmd.name) {
-    plugin.clone()
-  } else {
-    anyhow::bail!("Plugin not found");
-  };
-
-  let println = |msg| {
+  let println = |msg: String| {
     if let Some(ref pbar) = pbar {
       pbar.println(msg);
     } else {
@@ -135,145 +237,35 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
     style(&plugin.name).bold()
   ));
 
-  cmd!("cargo", "pgx", "stop", "pg15")
-    .dir("pgx_show_hooks")
-    .stderr_null()
-    .stdout_null()
-    .run()?;
-  {
-    let conf = PathBuf::from(&config.pg_data).join("postgresql.conf");
-    let pgconf = std::fs::read_to_string(&conf)?;
-    let mut new_pgconf = String::new();
-    for line in pgconf.lines() {
-      if line.starts_with("shared_preload_libraries = ") || line.starts_with("#shared_preload_libraries = ") {
-        if let InstallStrategy::Preload | InstallStrategy::PreloadInstall = plugin.install_strategy {
-          let preloads = collect_shared_preload_libraries(&db, vec![&plugin]);
-          writeln!(
-            new_pgconf,
-            "shared_preload_libraries = '{}' # modified by pgext",
-            preloads.join(",")
-          )?;
-        } else {
-          writeln!(new_pgconf, "shared_preload_libraries = ''  # modified by pgext")?;
-        }
-      } else if line.starts_with("session_preload_libraries = ") || line.starts_with("#session_preload_libraries = ") {
-        writeln!(new_pgconf, "session_preload_libraries = ''  # modified by pgext")?;
-      } else if line.starts_with("local_preload_libraries = ") || line.starts_with("#local_preload_libraries = ") {
-        writeln!(new_pgconf, "local_preload_libraries = ''  # modified by pgext")?;
-      } else {
-        writeln!(new_pgconf, "{}", line)?;
-      }
-    }
-    std::fs::write(conf, new_pgconf)?;
-  }
+  pgx_stop_pg15()?;
+  edit_pgconf(&db, &config, &vec![&plugin])?;
+  pgx_start_pg15()?;
 
-  let output = cmd!("cargo", "pgx", "start", "pg15")
-    .dir("pgx_show_hooks")
-    .stderr_to_stdout()
-    .stdout_capture()
-    .unchecked()
-    .run()?;
+  let mut client = Client::connect_test_db()?;
+  client.show_preload_libraries(println)?;
+  client.handle_installed(println)?;
+  client.create_exn_if_absent("pgx_show_hooks")?;
 
-  if !output.status.success() {
-    println!("{}", std::str::from_utf8(&output.stdout)?);
-    let log = home::home_dir().unwrap().join(".pgx").join("15.log"); // TODO: pgx should support this
-    cmd!("tail", "-n", "50", log).run()?;
-    return Err(anyhow::anyhow!("Failed to start pg15"));
-  }
-
-  let whoami = cmd!("whoami").read()?;
-  let mut client = Client::connect(
-    &format!("host=localhost dbname=postgres user={} port=28815", whoami.trim()),
-    NoTls,
-  )?;
-
-  let result = client.query_one("SHOW shared_preload_libraries;", &[])?;
-  println(format!("shared_preload_libraries: {}", result.get::<_, String>(0)));
-
-  let result = client.query_one("SHOW session_preload_libraries;", &[])?;
-  println(format!("session_preload_libraries: {}", result.get::<_, String>(0)));
-
-  let result = client.query_one("SHOW local_preload_libraries;", &[])?;
-  println(format!("local_preload_libraries: {}", result.get::<_, String>(0)));
-
-  let result = client.query("SELECT extname, extversion FROM pg_extension;", &[])?;
-  for x in result.iter() {
-    let name = x.get::<_, String>(0);
-    let ver = x.get::<_, String>(1);
-    if name == "plpgsql" {
-      // it's fine to keep them
-      println(format!("installed pg_extension: {name}@{ver}"));
-    } else if name == "pgx_show_hooks" {
-      println(format!("installed pg_extension: {name}@{ver}"));
-      const REQUIRED_VER: &str = "0.0.3";
-      if ver != REQUIRED_VER {
-        bail!("require pgx_show_hooks@{REQUIRED_VER}, but found {ver}");
-      }
-    } else {
-      println(format!("dropping pg_extension: {name}@{ver}"));
-      client.execute(&format!("DROP EXTENSION {};", name), &[])?;
-    }
-  }
-
-  client.execute("CREATE EXTENSION IF NOT EXISTS pgx_show_hooks;", &[])?;
-
-  for extname in plugin.dependencies.iter() {
-    client.execute(&format!("CREATE EXTENSION IF NOT EXISTS {};", extname), &[])?;
-  }
-
-  if let InstallStrategy::Install | InstallStrategy::PreloadInstall | InstallStrategy::LoadInstall =
-    plugin.install_strategy
-  {
-    client.execute(&format!("CREATE EXTENSION IF NOT EXISTS {};", plugin.name), &[])?;
-  }
-
-  if let InstallStrategy::LoadInstall | InstallStrategy::Load = plugin.install_strategy {
-    client
-      .execute(&format!("LOAD '{}';", plugin.name), &[])
-      .context("... when load extension")?;
-  }
-
-  let rows = client.query("SELECT * FROM show_hooks.all();", &[])?;
-
-  let mut hooks = vec![];
-
-  for x in rows.iter() {
-    if x.get::<_, Option<String>>(1).is_some() {
-      let hook_name = x.get::<_, String>(0);
-      println(format!("{}: installed", hook_name));
-      hooks.push(hook_name);
-    }
-  }
-
-  if let InstallStrategy::Install | InstallStrategy::PreloadInstall | InstallStrategy::LoadInstall =
-    plugin.install_strategy
-  {
-    if let Err(e) = client
-      .execute(&format!("DROP EXTENSION {};", plugin.name), &[])
-      .context("when drop extension")
-    {
-      println(format!("{}: {}", style("Error").red().bold(), e));
-    }
-  }
-
-  for extname in plugin.dependencies.iter().rev() {
-    client
-      .execute(&format!("DROP EXTENSION {};", extname), &[])
-      .context("when drop dependent extension")?;
-  }
+  client.create_exns_for(&plugin)?;
+  let hooks = client.show_hooks_all(println)?;
+  client.drop_exns_for(&plugin, println)?;
 
   if cmd.check {
     let name_tag = format!("{}@{}", plugin.name, plugin.version);
     let workdir = create_workdir()?;
     let build_dir = workdir.join("builds").join(&name_tag);
-    pgxs_install_check(&plugin, &build_dir, &config.pg_config).context("when running installcheck")?
+
+    println!("{} {}", style("Regression Testing").bold().blue(), plugin.name);
+    if let Err(err) = pgxs_installcheck(&plugin, None, &build_dir, &config.pg_config) {
+      println(format!("{err}"));
+      println(format!(
+        "{} - {}",
+        style("Failed").bold().red(),
+        style(&plugin.name).bold()
+      ));
+    }
   }
 
-  cmd!("cargo", "pgx", "stop", "pg15")
-    .dir("pgx_show_hooks")
-    .stderr_null()
-    .stdout_null()
-    .run()?;
-
+  pgx_stop_pg15()?;
   Ok(hooks)
 }
