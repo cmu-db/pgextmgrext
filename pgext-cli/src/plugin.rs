@@ -71,7 +71,7 @@ pub fn find_plugin(db: &PluginDb, name: &str) -> Result<Plugin> {
 }
 
 /// Collects all unique shared preload libraries in the dependency chain
-pub fn collect_shared_preload_libraries(db: &PluginDb, plugins: &Vec<&Plugin>) -> Vec<String> {
+pub fn collect_shared_preload_libraries(db: &PluginDb, plugins: &[&Plugin]) -> Vec<String> {
   fn collect_helper(db: &PluginDb, plugin: &Plugin, preloads: &mut HashSet<String>) {
     for extname in plugin.dependencies.iter() {
       let dep = db.plugins.iter().find(|x| &x.name == extname).unwrap().clone();

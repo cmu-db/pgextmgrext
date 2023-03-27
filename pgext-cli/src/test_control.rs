@@ -7,11 +7,11 @@ use crate::plugin::{InstallStrategy, Plugin};
 
 pub trait ExtTestControl {
   fn connect_test_db() -> Result<Client>;
-  fn handle_installed<F: Fn(String) -> ()>(&mut self, println: F) -> Result<()>;
-  fn show_preload_libraries<F: Fn(String) -> ()>(&mut self, println: F) -> Result<()>;
+  fn handle_installed<F: Fn(String)>(&mut self, println: F) -> Result<()>;
+  fn show_preload_libraries<F: Fn(String)>(&mut self, println: F) -> Result<()>;
   fn create_exns_for(&mut self, plugin: &Plugin) -> Result<()>;
-  fn drop_exns_for<F: Fn(String) -> ()>(&mut self, plugin: &Plugin, println: F) -> Result<()>;
-  fn show_hooks_all<F: Fn(String) -> ()>(&mut self, println: F) -> Result<Vec<String>>;
+  fn drop_exns_for<F: Fn(String)>(&mut self, plugin: &Plugin, println: F) -> Result<()>;
+  fn show_hooks_all<F: Fn(String)>(&mut self, println: F) -> Result<Vec<String>>;
   fn create_exn_if_absent(&mut self, extname: &str) -> Result<u64>;
   fn drop_exn(&mut self, extname: &str) -> Result<u64>;
 }
@@ -26,7 +26,7 @@ impl ExtTestControl for Client {
     Ok(client)
   }
 
-  fn show_preload_libraries<F: Fn(String) -> ()>(&mut self, println: F) -> Result<()> {
+  fn show_preload_libraries<F: Fn(String)>(&mut self, println: F) -> Result<()> {
     let result = self.query_one("SHOW shared_preload_libraries;", &[])?;
     println(format!("shared_preload_libraries: {}", result.get::<_, String>(0)));
 
@@ -68,7 +68,7 @@ impl ExtTestControl for Client {
     Ok(())
   }
 
-  fn drop_exns_for<F: Fn(String) -> ()>(&mut self, plugin: &Plugin, println: F) -> Result<()> {
+  fn drop_exns_for<F: Fn(String)>(&mut self, plugin: &Plugin, println: F) -> Result<()> {
     if let InstallStrategy::Install | InstallStrategy::PreloadInstall | InstallStrategy::LoadInstall =
       plugin.install_strategy
     {
@@ -78,12 +78,12 @@ impl ExtTestControl for Client {
     }
 
     for extname in plugin.dependencies.iter().rev() {
-      self.drop_exn(&extname).context("when drop dependent extension")?;
+      self.drop_exn(extname).context("when drop dependent extension")?;
     }
     Ok(())
   }
 
-  fn show_hooks_all<F: Fn(String) -> ()>(&mut self, println: F) -> Result<Vec<String>> {
+  fn show_hooks_all<F: Fn(String)>(&mut self, println: F) -> Result<Vec<String>> {
     let rows = self.query("SELECT * FROM show_hooks.all();", &[])?;
 
     let mut hooks = vec![];
@@ -98,7 +98,7 @@ impl ExtTestControl for Client {
     anyhow::Ok(hooks)
   }
 
-  fn handle_installed<F: Fn(String) -> ()>(&mut self, println: F) -> Result<()> {
+  fn handle_installed<F: Fn(String)>(&mut self, println: F) -> Result<()> {
     let result = self.query("SELECT extname, extversion FROM pg_extension;", &[])?;
     for x in result.iter() {
       let name = x.get::<_, String>(0);

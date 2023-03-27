@@ -141,7 +141,7 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
     style(&second.name).bold()
   ));
 
-  let shared_preloads = edit_pgconf(&db, &config, &vec![&first, &second])?;
+  let shared_preloads = edit_pgconf(&db, &config, &[&first, &second])?;
   pgx_start_pg15()?;
 
   let mut client = Client::connect_test_db()?;
@@ -158,7 +158,7 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   if cmd.check {
     let name_tag = format!("{}@{}", second.name, second.version);
     let workdir = create_workdir()?;
-    let build_dir = workdir.join("builds").join(&name_tag);
+    let build_dir = workdir.join("builds").join(name_tag);
 
     println!("{} {}", style("Regression Testing").bold().blue(), second.name);
 
@@ -182,7 +182,7 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
     style(&first.name).bold()
   ));
 
-  let shared_preloads = edit_pgconf(&db, &config, &vec![&second, &first])?;
+  let shared_preloads = edit_pgconf(&db, &config, &[&second, &first])?;
   pgx_start_pg15()?;
 
   let mut client = Client::connect_test_db()?;
@@ -199,7 +199,7 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   if cmd.check {
     let name_tag = format!("{}@{}", second.name, second.version);
     let workdir = create_workdir()?;
-    let build_dir = workdir.join("builds").join(&name_tag);
+    let build_dir = workdir.join("builds").join(name_tag);
 
     println!("{} {}", style("Regression Testing").bold().blue(), second.name);
 
@@ -238,7 +238,7 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
   ));
 
   pgx_stop_pg15()?;
-  edit_pgconf(&db, &config, &vec![&plugin])?;
+  edit_pgconf(&db, &config, &[&plugin])?;
   pgx_start_pg15()?;
 
   let mut client = Client::connect_test_db()?;
@@ -253,7 +253,7 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
   if cmd.check {
     let name_tag = format!("{}@{}", plugin.name, plugin.version);
     let workdir = create_workdir()?;
-    let build_dir = workdir.join("builds").join(&name_tag);
+    let build_dir = workdir.join("builds").join(name_tag);
 
     println!("{} {}", style("Regression Testing").bold().blue(), plugin.name);
     if let Err(err) = pgxs_installcheck(&plugin, None, &build_dir, &config.pg_config) {

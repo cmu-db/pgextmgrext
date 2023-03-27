@@ -1,9 +1,10 @@
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use crate::plugin::{collect_shared_preload_libraries, Plugin, PluginDb};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::fmt::Write as _;
+
+use crate::plugin::{collect_shared_preload_libraries, Plugin, PluginDb};
 
 #[derive(Serialize, Deserialize)]
 pub struct WorkspaceConfig {
@@ -18,11 +19,11 @@ pub fn load_workspace_config() -> Result<WorkspaceConfig> {
   Ok(toml::from_str(&config)?)
 }
 
-pub fn edit_pgconf(db: &PluginDb, config: &WorkspaceConfig, plugins: &Vec<&Plugin>) -> Result<Vec<String>> {
+pub fn edit_pgconf(db: &PluginDb, config: &WorkspaceConfig, plugins: &[&Plugin]) -> Result<Vec<String>> {
   let conf = PathBuf::from(&config.pg_data).join("postgresql.conf");
   let pgconf = std::fs::read_to_string(&conf)?;
   let mut new_pgconf = String::new();
-  let shared_preloads = collect_shared_preload_libraries(&db, plugins);
+  let shared_preloads = collect_shared_preload_libraries(db, plugins);
   for line in pgconf.lines() {
     if line.starts_with("shared_preload_libraries = ") || line.starts_with("#shared_preload_libraries = ") {
       if shared_preloads.is_empty() {
