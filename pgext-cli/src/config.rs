@@ -19,7 +19,7 @@ pub fn load_workspace_config() -> Result<WorkspaceConfig> {
   Ok(toml::from_str(&config)?)
 }
 
-pub fn edit_pgconf(db: &PluginDb, config: &WorkspaceConfig, plugins: &[&Plugin]) -> Result<Vec<String>> {
+pub fn edit_pgconf(db: &PluginDb, config: &WorkspaceConfig, plugins: &[Plugin]) -> Result<Vec<String>> {
   let conf = PathBuf::from(&config.pg_data).join("postgresql.conf");
   let pgconf = std::fs::read_to_string(&conf)?;
   let mut new_pgconf = String::new();
