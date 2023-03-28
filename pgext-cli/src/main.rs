@@ -80,13 +80,14 @@ pub struct CmdTest {
 /// Testing compatibility between two extensions
 #[derive(Parser, Debug)]
 pub struct CmdTestPair {
-  /// First extension name in plugindb
-  first: String,
-  /// Second extension name in plugindb
-  second: String,
+  /// extension names in plugindb
+  exts: Vec<String>,
   /// Run installchecks
   #[clap(long)]
   check: bool,
+  /// Run custom SQLs after installing all extensions
+  #[clap(long)]
+  run_custom_sql: bool,
 }
 
 /// Install all extensions in plugindb

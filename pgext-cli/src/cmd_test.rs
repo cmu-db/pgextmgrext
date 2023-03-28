@@ -4,6 +4,7 @@ use std::time::Duration;
 use anyhow::Result;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
+use itertools::Itertools;
 use pgext_hook_macros::{for_all_hooks, for_all_plpgsql_hooks};
 use postgres::Client;
 
@@ -110,10 +111,18 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
 }
 
 pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
+  let custom_sql = if cmd.run_custom_sql {
+    Some(std::fs::read_to_string("custom.sql")?)
+  } else {
+    None
+  };
+
   let db = load_plugin_db()?;
   let config = load_workspace_config()?;
-  let first = find_plugin(&db, &cmd.first)?;
-  let second = find_plugin(&db, &cmd.second)?;
+  let mut plugins = vec![];
+  for name in &cmd.exts {
+    plugins.push(find_plugin(&db, name)?);
+  }
 
   let println = |msg: String| {
     if let Some(ref pbar) = pbar {
@@ -124,24 +133,14 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   };
 
   println(format!(
-    "{} {} {} {}",
-    style("Testing compatibility between").blue().bold(),
-    style(&first.name).bold(),
-    style("and").blue().bold(),
-    style(&second.name).bold()
+    "{} {}",
+    style("Installing").blue().bold(),
+    plugins.iter().map(|x| style(&x.name).bold()).join(", ")
   ));
 
   pgx_stop_pg15()?;
 
-  // Testing first,second
-  println(format!(
-    "{} {}, {}",
-    style("Checking order").blue().bold(),
-    style(&first.name).bold(),
-    style(&second.name).bold()
-  ));
-
-  let shared_preloads = edit_pgconf(&db, &config, &[&first, &second])?;
+  let shared_preloads = edit_pgconf(&db, &config, &plugins)?;
   pgx_start_pg15()?;
 
   let mut client = Client::connect_test_db()?;
@@ -149,72 +148,50 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   client.handle_installed(println)?;
   client.create_exn_if_absent("pgx_show_hooks")?;
 
-  client.create_exns_for(&first)?;
-  client.create_exns_for(&second)?;
+  for plugin in &plugins {
+    client.create_exns_for(plugin)?;
+  }
   let hooks = client.show_hooks_all(println)?;
-  client.drop_exns_for(&second, println)?;
-  client.drop_exns_for(&first, println)?;
+  if custom_sql.is_some() {
+    println!("{} with psql", style("Running custom.sql").blue().bold());
+    // we want to see logs... and we have to use psql
+    duct::cmd!(
+      "psql",
+      "-h",
+      "localhost",
+      "-d",
+      "postgres",
+      "-p",
+      "28815",
+      "-f",
+      "custom.sql"
+    )
+    .run()?;
+  }
+  for plugin in plugins.iter().rev() {
+    client.drop_exns_for(plugin, println)?;
+  }
 
   if cmd.check {
-    let name_tag = format!("{}@{}", second.name, second.version);
-    let workdir = create_workdir()?;
-    let build_dir = workdir.join("builds").join(name_tag);
+    if let [first, second] = &plugins[..] {
+      let name_tag = format!("{}@{}", second.name, second.version);
+      let workdir = create_workdir()?;
+      let build_dir = workdir.join("builds").join(name_tag);
 
-    println!("{} {}", style("Regression Testing").bold().blue(), second.name);
+      println!("{} {}", style("Regression Testing").bold().blue(), second.name);
 
-    if let Err(err) = pgxs_installcheck(&second, Some((&first, &shared_preloads)), &build_dir, &config.pg_config) {
-      println(format!("{err}"));
-      println(format!(
-        "{} - {}",
-        style("Failed").bold().red(),
-        style(&second.name).bold()
-      ));
+      if let Err(err) = pgxs_installcheck(second, Some((first, &shared_preloads)), &build_dir, &config.pg_config) {
+        println(format!("{err}"));
+        println(format!(
+          "{} - {}",
+          style("Failed").bold().red(),
+          style(&second.name).bold()
+        ));
+      }
     }
   }
   pgx_stop_pg15()?;
 
-  // Testing second,first
-  println(format!(
-    "{} {}{} {}",
-    style("Checking order").blue().bold(),
-    style(&second.name).bold(),
-    style(",").blue().bold(),
-    style(&first.name).bold()
-  ));
-
-  let shared_preloads = edit_pgconf(&db, &config, &[&second, &first])?;
-  pgx_start_pg15()?;
-
-  let mut client = Client::connect_test_db()?;
-  client.show_preload_libraries(println)?;
-  client.handle_installed(println)?;
-  client.create_exn_if_absent("pgx_show_hooks")?;
-
-  client.create_exns_for(&second)?;
-  client.create_exns_for(&first)?;
-  let hooks_rev = client.show_hooks_all(println)?;
-  client.drop_exns_for(&first, println)?;
-  client.drop_exns_for(&second, println)?;
-
-  if cmd.check {
-    let name_tag = format!("{}@{}", second.name, second.version);
-    let workdir = create_workdir()?;
-    let build_dir = workdir.join("builds").join(name_tag);
-
-    println!("{} {}", style("Regression Testing").bold().blue(), second.name);
-
-    if let Err(err) = pgxs_installcheck(&first, Some((&second, &shared_preloads)), &build_dir, &config.pg_config) {
-      println(format!("{err}"));
-      println(format!(
-        "{} - {}",
-        style("Failed").bold().red(),
-        style(&first.name).bold()
-      ));
-    }
-  }
-
-  pgx_stop_pg15()?;
-  debug_assert_eq!(&hooks, &hooks_rev);
   Ok(hooks)
 }
 
@@ -238,7 +215,7 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
   ));
 
   pgx_stop_pg15()?;
-  edit_pgconf(&db, &config, &[&plugin])?;
+  edit_pgconf(&db, &config, &[plugin.clone()])?;
   pgx_start_pg15()?;
 
   let mut client = Client::connect_test_db()?;
