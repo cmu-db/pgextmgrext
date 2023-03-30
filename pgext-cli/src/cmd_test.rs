@@ -156,11 +156,23 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   client.create_exn_if_absent("pgx_show_hooks")?;
 
   for plugin in &plugins {
-    match (cmd.check, &plugin.check_strategy) {
-      (true, _) | (false, CheckStrategy::Install) => client.create_exns_for(plugin)?,
-      (false, CheckStrategy::NoInstall) => {
-        println!("skipping create extension for {}", plugin.name);
+    if cmd.check {
+      let check_plugin = plugins.last().unwrap();
+      match check_plugin.check_strategy {
+        CheckStrategy::Install => {
+          client.create_exns_for(check_plugin)?;
+        }
+        CheckStrategy::NoInstall => {
+          if check_plugin.dependencies.iter().find(|x| x == &&plugin.name).is_none() {
+            client.create_exns_for(check_plugin)?;
+          } else {
+            println!("skipping create extension for dependency {}", plugin.name);
+            // TODO: warn users if there are dependencies that are not installed
+          }
+        }
       }
+    } else {
+      client.create_exns_for(plugin)?;
     }
   }
   let hooks = client.show_hooks_all(println)?;
