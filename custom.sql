@@ -1,1 +1,1 @@
-explain select 1;
+SELECT 'a=>1,a=>2'::hstore;

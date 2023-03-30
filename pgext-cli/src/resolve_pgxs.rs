@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use console::style;
 use duct::cmd;
 use walkdir::WalkDir;
@@ -75,9 +75,24 @@ fn pgxs_regress_load_extensions(path: &Path, extnames: Option<&Vec<String>>) -> 
   Ok(())
 }
 
+/// Force use GNU sed on macOS
+fn add_gnu_sed(mut cmd: duct::Expression) -> Result<duct::Expression> {
+  if cfg!(target_os = "macos") {
+    let homebrew_prefix = std::env::var("HOMEBREW_PREFIX").context("homebrew prefix not found in env var")?;
+    let path = std::env::var("PATH")?;
+    let gnu_path = format!("{}/opt/gnu-sed/libexec/gnubin", homebrew_prefix);
+    if !Path::new(&gnu_path).join("sed").try_exists()? {
+      bail!("Please install gnu-sed by: brew install gnu-sed");
+    }
+    let path = format!("{}:{}", gnu_path, path);
+    cmd = cmd.env("PATH", path);
+  }
+  Ok(cmd)
+}
+
 pub fn pgxs_installcheck(
   plugin: &Plugin,
-  other: Option<(&Plugin, &Vec<String>)>,
+  other: Option<(&Vec<String>, &Vec<String>)>,
   build_dir: &Path,
   pg_config: &str,
 ) -> Result<()> {
@@ -90,14 +105,13 @@ pub fn pgxs_installcheck(
 
   if let Some(parent) = final_path {
     let path = parent.join("Makefile");
-    pgxs_regress_load_extensions(&path, other.map(|x| x.1))?;
+    pgxs_regress_load_extensions(&path, other.map(|x| x.0))?;
 
     let pg_config = format!("PG_CONFIG={}", pg_config);
     let whoami = cmd!("whoami").read()?;
     let pg_user = format!("PG_USER={}", whoami.trim());
     let pg_host = format!("PGHOST={}", pg_host.to_str().unwrap());
-    cmd!("make", "-B", "USE_PGXS=1", pg_user, pg_config, pg_host, "installcheck")
-      .dir(parent)
+    add_gnu_sed(cmd!("make", "-B", "USE_PGXS=1", pg_user, pg_config, pg_host, "installcheck").dir(parent))?
       .run()
       .context(format!(
         "error when running `make installcheck` on {}",
@@ -122,7 +136,11 @@ pub fn resolve_build_pgxs(plugin: &Plugin, build_dir: &Path, pg_config: &str, ve
 
       let cmd = duct::cmd(parent.join("configure"), plugin.resolver_args.iter());
       let cmd = if verbose { cmd } else { cmd.stderr_null().stdout_null() };
-      cmd.dir(&parent).run().context("failed to configure")?;
+      cmd
+        .dir(&parent)
+        .env("PG_CONFIG", pg_config)
+        .run()
+        .context("failed to configure")?;
     }
 
     let pg_config = format!("PG_CONFIG={}", pg_config);

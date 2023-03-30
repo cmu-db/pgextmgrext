@@ -34,6 +34,20 @@ fn default_install_strategy() -> InstallStrategy {
 }
 
 #[derive(Deserialize, Clone)]
+pub enum CheckStrategy {
+  /// Default install method, simply call create extension.
+  #[serde(rename = "install")]
+  Install,
+  /// Don't create extension because the unit test is creating it.
+  #[serde(rename = "no-install")]
+  NoInstall,
+}
+
+fn default_check_strategy() -> CheckStrategy {
+  CheckStrategy::Install
+}
+
+#[derive(Deserialize, Clone)]
 pub struct Plugin {
   pub name: String,
   pub version: String,
@@ -47,6 +61,8 @@ pub struct Plugin {
   pub resolver_args: Vec<String>,
   #[serde(default = "default_install_strategy")]
   pub install_strategy: InstallStrategy,
+  #[serde(default = "default_check_strategy")]
+  pub check_strategy: CheckStrategy,
   #[serde(default)]
   pub dependencies: Vec<String>,
 }

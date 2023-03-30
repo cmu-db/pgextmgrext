@@ -11,6 +11,7 @@ version = "1.5.0"
 download_url_zip = "https://github.com/ossc-db/pg_hint_plan/archive/refs/tags/REL15_1_5_0.zip"
 resolver = "pgxs"
 install_strategy = "preload+install"
+check_strategy = "no-install"
 dependencies = ["pg_stat_statements"]
 
 [[plugins]]
@@ -386,3 +387,17 @@ version = "0.0.0"
 no_download = true
 resolver = "pgsrctree"
 install_strategy = "preload+install"
+
+[[plugins]]
+name = "hstore"
+version = "0.0.0"
+no_download = true
+resolver = "pgsrctree"
+install_strategy = "install"
+
+[[plugins]]
+name = "postgis"
+version = "3.3.2"
+download_url_tar = "https://download.osgeo.org/postgis/source/postgis-3.3.2.tar.gz"
+resolver = "pgxs"
+install_strategy = "install"

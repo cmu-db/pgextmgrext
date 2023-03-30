@@ -72,7 +72,10 @@ impl ExtTestControl for Client {
     if let InstallStrategy::Install | InstallStrategy::PreloadInstall | InstallStrategy::LoadInstall =
       plugin.install_strategy
     {
-      if let Err(e) = self.drop_exn(&plugin.name).context("when drop extension") {
+      if let Err(e) = self
+        .drop_exn(&plugin.name)
+        .with_context(|| format!("when drop {}", plugin.name))
+      {
         println(format!("{}: {}", style("Error").red().bold(), e));
       }
     }
