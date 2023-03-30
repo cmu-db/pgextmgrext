@@ -10,7 +10,7 @@ use postgres::Client;
 
 use crate::cmd_install::create_workdir;
 use crate::config::{edit_pgconf, load_workspace_config};
-use crate::plugin::{find_plugin, load_plugin_db};
+use crate::plugin::{find_plugin, load_plugin_db, CheckStrategy, InstallStrategy};
 use crate::resolve_pgxs::pgxs_installcheck;
 use crate::test_control::{pgx_start_pg15, pgx_stop_pg15, ExtTestControl};
 use crate::{CmdTest, CmdTestAll, CmdTestPair};
@@ -123,6 +123,13 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   for name in &cmd.exts {
     plugins.push(find_plugin(&db, name)?);
   }
+  for plugin in &plugins {
+    for dep in &plugin.dependencies {
+      if !plugins.iter().any(|x| &x.name == dep) {
+        println!("{}: dependency {} is required", style("Error").red().bold(), dep);
+      }
+    }
+  }
 
   let println = |msg: String| {
     if let Some(ref pbar) = pbar {
@@ -149,7 +156,24 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   client.create_exn_if_absent("pgx_show_hooks")?;
 
   for plugin in &plugins {
-    client.create_exns_for(plugin)?;
+    if cmd.check {
+      let check_plugin = plugins.last().unwrap();
+      match check_plugin.check_strategy {
+        CheckStrategy::Install => {
+          client.create_exns_for(check_plugin)?;
+        }
+        CheckStrategy::NoInstall => {
+          if check_plugin.dependencies.iter().find(|x| x == &&plugin.name).is_none() {
+            client.create_exns_for(check_plugin)?;
+          } else {
+            println!("skipping create extension for dependency {}", plugin.name);
+            // TODO: warn users if there are dependencies that are not installed
+          }
+        }
+      }
+    } else {
+      client.create_exns_for(plugin)?;
+    }
   }
   let hooks = client.show_hooks_all(println)?;
   if custom_sql.is_some() {
@@ -173,14 +197,28 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   }
 
   if cmd.check {
-    if let [first, second] = &plugins[..] {
+    if let Some(second) = plugins.last() {
       let name_tag = format!("{}@{}", second.name, second.version);
       let workdir = create_workdir()?;
       let build_dir = workdir.join("builds").join(name_tag);
 
       println!("{} {}", style("Regression Testing").bold().blue(), second.name);
-
-      if let Err(err) = pgxs_installcheck(second, Some((first, &shared_preloads)), &build_dir, &config.pg_config) {
+      let installs = plugins
+        .iter()
+        .filter_map(|x| match x.install_strategy {
+          InstallStrategy::LoadInstall | InstallStrategy::PreloadInstall | InstallStrategy::Install => {
+            Some(x.name.clone())
+          }
+          _ => None,
+        })
+        .take(plugins.len() - 1)
+        .collect_vec();
+      if let Err(err) = pgxs_installcheck(
+        second,
+        Some((&installs, &shared_preloads)),
+        &build_dir,
+        &config.pg_config,
+      ) {
         println(format!("{err}"));
         println(format!(
           "{} - {}",
