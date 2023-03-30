@@ -156,9 +156,9 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   client.create_exn_if_absent("pgx_show_hooks")?;
 
   for plugin in &plugins {
-    match plugin.check_strategy {
-      CheckStrategy::Install => client.create_exns_for(plugin)?,
-      CheckStrategy::NoInstall => {
+    match (cmd.check, &plugin.check_strategy) {
+      (true, _) | (false, CheckStrategy::Install) => client.create_exns_for(plugin)?,
+      (false, CheckStrategy::NoInstall) => {
         println!("skipping create extension for {}", plugin.name);
       }
     }
