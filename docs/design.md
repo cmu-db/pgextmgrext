@@ -4,13 +4,14 @@
 
 The Postgres Extension Environment project aims to provide an easy way for developers to integrate their extensions with PostgreSQL. In this project:
 
-* We will identify conflicts in existing Postgres extensions by case-study, testing and fuzzing.
-* We will build an extension framework to easily install multiple extensions, and integrate existing Postgres extensions with the new framework with minimum effort.
+* We will identify conflicts in existing Postgres extensions by case-studying well-known PostgreSQL extensions, testing by installing pairs of extensions likely to conflict together, and fuzzing Postgres instances with multiple extensions installed to test for correctness and performance.
+* We will design a new hook API for Postgres extensions, focusing on the planner and optimizer hooks, that makes it simpler to implement Postgres extensions.
+* Based on this API, we will build an extension framework to easily install and integrate multiple extensions. The goal of this framework should be to eliminate "hacky" code in extensions, which is specifically put there to ensure compatability with other extensions.
 * We will build an extension installer which automatically downloads, builds, patches, and installs Postgres extensions, along with their dependencies. This installer also facilitates our testing process.
 
 ## Architecture Design
 
-The project is basically broken into three parts: the extension manager, the extension framework, and the conflict detection tool. Currently, we have finished the extension manager, and is working on the extension framework.
+The project is divided into three parts: the extension manager, the extension framework, and the conflict detection tool. Currently, we have finished the extension manager, and are working on both the extension framework and the conflict detection tool.
 
 ### PgExt Tool
 
@@ -18,19 +19,22 @@ The Postgres extension installer (pgext) tool helps user build and install exten
 
 ![](pgext/01-installer.png)
 
-To install an extension, the installer will read extension download URL from the plugindb config file, which
-decides how to install the extension (i.e., by calling `CREATE EXTENSION` or add to `shared_preload_library`). The installer automatically detects PGXS Makefile in the extension source code,
-compiles it, and install it to Postgres.
+To install an extension, the installer will read the extension download URL from the plugindb config file, which
+decides how to install the extension (i.e., by calling `CREATE EXTENSION` or add to `shared_preload_library`). The installer automatically detects the PGXS Makefile in the extension source code, compiles it, and installs it to our Postgres instance.
 
-To collect information in the system, the installer will install two extensions (built by ourselves): `pgx_show_hooks` and `pgx_trace_hooks`. `pgx_show_hooks` adds a return set function to the system to collect the value of the function pointers of the hooks, so as to determine which hooks are used by the currently-installed extensions. `pgx_trace_hooks` will log all information when a hook is called, so that the installer can analyze the information to determine compability.
+To collect information in the system, the installer will install our homemade extensions: `pgx_show_hooks` and `pgx_trace_hooks`. `pgx_show_hooks` adds a return set function to the system to collect the value of the function pointers of the hooks, so as to determine which hooks are used by the currently-installed extensions. `pgx_trace_hooks` will log all information when a hook is called, so that the installer can analyze the information to determine compability.
 
 ### Extension Framework
 
-The extension framework currently focuses on optimizer and planner extensions. Originally, Postgres extensions directly modify the global function pointer (so-called *hooks*), so that Postgres can call the extensions during the query execution process.
+One of our findings after analyzing the Postgres extension ecosystem was that the types of hooks in the Postgres system made it difficult for extensions to be compatible with each other. For instance, the `get_relation_info_hook`, a hook which modifies the default internal Postgres table information, in `hypopg`, an extension that builds hypothetical indexes\*, will add a hypothetical index to the relation info. However, if another extension uses this information without the knowledge that their index isn't a real, installed index on the system, this could be potentially dangerous. In addition, we notice that some extensions have to copy-paste code (`pg_hint_plan` patches `pg_stat_statements` so that `pg_stat_statements` does not store duplicate queries) in order to remain compatible with one another.
+
+This was our motivation for creating this extension framework. The extension framework will focus on optimizer and planner extensions. Originally, Postgres extensions directly modify the global function pointer (so-called *hooks*), so that Postgres can call the extensions during the query execution process.
 
 ![](pgext/02-framework.png)
 
-The extension framework is *an extension* that provides new ways for extension developers to integrate their extensions with Postgres. After installing the extension framework to Postgres, it will take over all hooks in the system. An extension can request adding themselves to the extension registry by including the extension manager header and call `add_hook` function.
+We plan for the extension framework to be *an extension* that provides a new way for extension developers to integrate their extensions with Postgres. After installing the extension framework to Postgres, it will take over all hooks in the system. 
+
+An extension can request adding themselves to the extension registry by including the extension manager header and call `add_hook` function.
 
 ![](pgext/02-framework-2.png)
 
@@ -95,3 +99,6 @@ TBD
 
 * Integrate more extensions into the framework.
 * Investigate better extension framework for extensions using other hooks than planner and execution hooks.
+
+
+\* Hypothetical indexes are created so that the user can test whether the performance of problematic queries is increased by adding an index to the database system.
