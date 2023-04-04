@@ -16,13 +16,25 @@ The project is basically broken into three parts: the extension manager, the ext
 
 The Postgres extension installer (pgext) tool helps user build and install extensions to their Postgres instance with on command. It also collects necessary metrics for us to identify possible conflicts between extensions by analyzing hook usage in the system.
 
-Figure: TBD
+![](pgext/01-installer.png)
+
+To install an extension, the installer will read extension download URL from the plugindb config file, which
+decides how to install the extension (i.e., by calling `CREATE EXTENSION` or add to `shared_preload_library`). The installer automatically detects PGXS Makefile in the extension source code,
+compiles it, and install it to Postgres.
+
+To collect information in the system, the installer will install two extensions (built by ourselves): `pgx_show_hooks` and `pgx_trace_hooks`. `pgx_show_hooks` adds a return set function to the system to collect the value of the function pointers of the hooks, so as to determine which hooks are used by the currently-installed extensions. `pgx_trace_hooks` will log all information when a hook is called, so that the installer can analyze the information to determine compability.
 
 ### Extension Framework
 
-The extension framework currently focuses on optimizer and planner extensions.
+The extension framework currently focuses on optimizer and planner extensions. Originally, Postgres extensions directly modify the global function pointer (so-called *hooks*), so that Postgres can call the extensions during the query execution process.
 
-Figure: TBD
+![](pgext/02-framework.png)
+
+The extension framework is *an extension* that provides new ways for extension developers to integrate their extensions with Postgres. After installing the extension framework to Postgres, it will take over all hooks in the system. An extension can request adding themselves to the extension registry by including the extension manager header and call `add_hook` function.
+
+![](pgext/02-framework-2.png)
+
+After an extension is installed to the framework, the framework will determine the order to call the extensions one by one.
 
 Developers will need to modify their Postgres extension in order to use our extension framework. The modification should be very simple, i.e., by simply include a new header provided by us. We plan to integrate a few extensions that we already identify conflicts among them into the framework in this semester.
 
