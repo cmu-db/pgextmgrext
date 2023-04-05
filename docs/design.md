@@ -15,7 +15,7 @@ The project is divided into three parts: the extension manager, the extension fr
 
 ### PgExt Tool
 
-The Postgres extension installer (pgext) tool helps user build and install extensions to their Postgres instance with on command. It also collects necessary metrics for us to identify possible conflicts between extensions by analyzing hook usage in the system.
+The Postgres extension installer (pgext) tool helps user build and install extensions to their Postgres instance with one command. It also collects necessary metrics for us to identify possible conflicts between extensions by analyzing hook usage in the system.
 
 ![](pgext/01-installer.png)
 
@@ -64,17 +64,18 @@ Modifying Postgres source code is non-trivial work and the changes are unlikely 
 
 ### On Detecting Conflicts
 
-We identify several conflicts during our initial study on Postgres extensions:
+During our initial study on Postgres extensions, we identified and categorized extension incompatibilities into three types:
 
-* Hook Conflict.
-* Behavior Conflict.
-* Install Conflict.
+#### Installation Conflict
 
-For hook conflict, we can generate SQLs that covers code path of the extension based on the existing test cases for the extension. If extensions behave differently in different environment with the same set of SQL, then they cannot exist at the same time. This is possible to be automatically detected by tools.
+This is the case where an extension cannot be successfully installed to Postgres due to some internal/external dependencies. One example of installation conflict is that some extensions include Postgres source code, and therefore its correctness relies on whether it is being compiled and installed to the same Postgres version. The installer can take care of it.
 
-For behavior conflict, this is only possible by manually reviewing all extensions. For example, pg_hint_plan includes some part of pg_stat_statements source code to ensure the plan hints, which are part of the SQL comment, are properly stored in the statistics table.
+#### Erroneous Results
+This is the case where two extensions can be installed together but doing so results in crashing the program or producing erroneous results because they are using a same hook. To detect incompatibility associated with erroneous results, we can generate SQLs that covers code path of the extension based on the existing test cases for the extension. If extensions behave differently in different environments with the same set of SQL queires, then they cannot exist at the same time. This type of conflict is possible to be automatically detected by extending tools like [SQLSmith](https://github.com/anse1/sqlsmith) and [Squrriel](https://github.com/s3team/Squirrel).
 
-For install conflict, some extensions include Postgres source code, and therefore its correctness relies on whether it is being compiled and installed to the same Postgres version. The installer can take care of it.
+#### Unintented Behavior
+This is the case where two extensions are technically compatible with each other but doing so results in having unexpected results because they are using a same hook. For example, pg_hint_plan includes some parts of pg_stat_statements source code to ensure the plan hints (part of the SQL comments) are properly stored in the statistics table. To detect incompatibility associated with unintented behavior, we can first apply the same strategy as for erroneous results, but then we will have to manually review all extensions to determine which category they belong.
+
 
 ## Testing Plan
 
