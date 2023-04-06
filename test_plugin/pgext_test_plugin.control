@@ -1,0 +1,5 @@
+comment = 'pgext_test_plugin'
+default_version = '0.0.1'
+module_pathname = '$libdir/pgext_test_plugin'
+relocatable = false
+superuser = true

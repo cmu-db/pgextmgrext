@@ -1,0 +1,6 @@
+comment = 'pgext_framework:  Created by pgx'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/pgext_framework'
+relocatable = false
+superuser = true
+schema = 'pgext_framework'

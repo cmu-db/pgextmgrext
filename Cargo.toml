@@ -6,5 +6,6 @@ members = [
 exclude = [
     "pgx_show_hooks",
     "pgx_trace_hooks",
+    "pgext_framework",
     "pgextworkdir",
 ]
