@@ -10,7 +10,7 @@ mod test_control;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-/// PgExt - A PostgresSQL extension installer tool
+/// PgExtMgrExt - A PostgresSQL Extension Manager As an Extension
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -31,7 +31,7 @@ enum Commands {
   Demo(CmdDemo),
 }
 
-/// Demo
+/// Repeatedly run one extension's unit test while installing all other extensions one by one
 #[derive(Parser, Debug)]
 pub struct CmdDemo {
   /// The name of the extension (in `plugindb.toml`)
@@ -75,12 +75,12 @@ pub struct CmdInstallAll {
 #[derive(Parser, Debug)]
 pub struct CmdList {}
 
-/// Install extension
+/// Test one extension
 #[derive(Parser, Debug)]
 pub struct CmdTestSingle {
   /// The name of the extension (in `plugindb.toml`)
   name: String,
-  /// Run installchecks
+  /// Run extension unit tests
   #[clap(long)]
   check: bool,
 }
@@ -90,7 +90,7 @@ pub struct CmdTestSingle {
 pub struct CmdTest {
   /// extension names in plugindb
   exts: Vec<String>,
-  /// Run installchecks
+  /// Run last extension's unit tests after installing all extensions
   #[clap(long)]
   check_last: bool,
   /// Run custom SQLs after installing all extensions
@@ -98,12 +98,13 @@ pub struct CmdTest {
   run_custom_sql: bool,
 }
 
-/// Install all extensions in plugindb
+/// Test all extensions in plugindb individually
 #[derive(Parser, Debug)]
 pub struct CmdTestAll {
   /// Dump data to file
   #[clap(long)]
   dump_to: Option<String>,
+  /// Run extension unit tests
   #[clap(long)]
   check: bool,
 }

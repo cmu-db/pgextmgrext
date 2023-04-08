@@ -16,6 +16,7 @@ use crate::resolve_pgxs::pgxs_installcheck;
 use crate::test_control::{pgx_start_pg15, pgx_stop_pg15, ExtTestControl};
 use crate::{CmdDemo, CmdTest, CmdTestAll, CmdTestSingle};
 
+/// Run the `demo` subcommand
 pub fn cmd_demo(cmd: CmdDemo) -> Result<()> {
   let db = load_plugin_db()?;
   let last = find_plugin(&db, &cmd.name)?;
@@ -96,6 +97,7 @@ pub fn cmd_demo(cmd: CmdDemo) -> Result<()> {
   Ok(())
 }
 
+/// Run the `test-all` subcommand
 pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   let db = load_plugin_db()?;
   let mut failed = vec![];
@@ -191,6 +193,7 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   Ok(())
 }
 
+/// Run the `test` subcommand
 pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
   let custom_sql = if cmd.run_custom_sql {
     Some(std::fs::read_to_string("custom.sql")?)
@@ -315,6 +318,7 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
   Ok(hooks)
 }
 
+/// Run the `test-single` subcommand
 pub fn cmd_test_single(cmd: CmdTestSingle, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
   let db = load_plugin_db()?;
   let config = load_workspace_config()?;

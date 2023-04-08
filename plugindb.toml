@@ -179,12 +179,12 @@ resolver = "pgxs"
 install_strategy = "preload+install"
 
 
-# [[plugins]]
-# name = "pgsentinel"
-# version = "fef77c8ae8061b22f12fc33872216eda5f10edc2"
-# download_git = { url = "https://github.com/pgsentinel/pgsentinel", rev = "fef77c8" }
-# resolver = "pgxs"
-# install_strategy = "preload+install"
+[[plugins]]
+name = "pgsentinel"
+version = "fef77c8ae8061b22f12fc33872216eda5f10edc2"
+download_git = { url = "https://github.com/pgsentinel/pgsentinel", rev = "fef77c8" }
+resolver = "pgxs"
+install_strategy = "preload+install"
 
 
 [[plugins]]

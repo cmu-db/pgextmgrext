@@ -6,6 +6,7 @@ use duct::cmd;
 
 use crate::plugin::GitDownload;
 
+/// Download and uncompress a zip file
 pub fn download_zip(zip_url: String, download_path: &Path, build_dir: &Path, verbose: bool) -> Result<()> {
   if download_path.exists() {
     println!("{} {}", style("Skipping Download").bold().blue(), zip_url);
@@ -33,6 +34,7 @@ pub fn download_zip(zip_url: String, download_path: &Path, build_dir: &Path, ver
   Ok(())
 }
 
+/// Download an uncompress a tar file
 pub fn download_tar(tar_url: String, download_path: &Path, build_dir: &Path, verbose: bool) -> Result<()> {
   if download_path.exists() {
     println!("{} {}", style("Skipping Download").bold().blue(), tar_url);

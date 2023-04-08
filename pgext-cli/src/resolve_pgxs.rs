@@ -1,3 +1,5 @@
+//! Helper functions for working with PGXS
+
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -7,6 +9,7 @@ use walkdir::WalkDir;
 
 use crate::plugin::Plugin;
 
+/// Parse PGXS Makefile to get extension name
 fn parse_pgxs_makefile(path: &Path, pg_config_key_val: &str) -> Result<String> {
   const PATCH: &str = "pgext-cli-pgxs-extension:\n\t@echo \"$(EXTENSION)\"\n";
   std::fs::write(path, patch_makefile(&std::fs::read_to_string(path)?, PATCH)?)?;
@@ -21,6 +24,7 @@ fn parse_pgxs_makefile(path: &Path, pg_config_key_val: &str) -> Result<String> {
   Ok(ext_name)
 }
 
+/// Make patches to the PGXS Makefile
 fn patch_makefile(content: &str, patch: &str) -> Result<String> {
   const PGEXT_CLI_BEGIN: &str = "\n# *****BEGIN PGEXT-CLI***** #\n";
   const PGEXT_CLI_END: &str = "\n# *****END PGEXT-CLI***** #\n";
@@ -36,6 +40,7 @@ fn patch_makefile(content: &str, patch: &str) -> Result<String> {
   }
 }
 
+/// Find PGXS Makefile Path
 pub fn find_pgxs_path(build_dir: &Path) -> Result<Option<PathBuf>> {
   let mut final_path: Option<PathBuf> = None;
   for entry in WalkDir::new(build_dir) {
@@ -58,11 +63,10 @@ pub fn find_pgxs_path(build_dir: &Path) -> Result<Option<PathBuf>> {
   Ok(final_path)
 }
 
-/// Patch Makefile to load two extensions for regression tests
+/// Patches Makefile to load two extensions for regression tests
 fn pgxs_regress_load_extensions(path: &Path, extnames: Option<&Vec<String>>) -> Result<()> {
   const REGRESS_OPTS: &str = "REGRESS_OPTS += --load-extension";
   if let Some(names) = extnames {
-    // format!("{0} {1}\n{0} {2}\n", REGRESS_OPTS, first, other)
     let patch = names
       .iter()
       .map(|name| format!("{} {:#?}\n", REGRESS_OPTS, name))
@@ -90,6 +94,7 @@ fn add_gnu_sed(mut cmd: duct::Expression) -> Result<duct::Expression> {
   Ok(cmd)
 }
 
+/// Run PGXS `make installcheck` command
 pub fn pgxs_installcheck(
   plugin: &Plugin,
   other: Option<(&Vec<String>, &Vec<String>)>,
@@ -123,6 +128,7 @@ pub fn pgxs_installcheck(
   }
 }
 
+/// Resolve and build extensions using PGXS Makefile
 pub fn resolve_build_pgxs(plugin: &Plugin, build_dir: &Path, pg_config: &str, verbose: bool) -> Result<()> {
   let final_path: Option<PathBuf> = find_pgxs_path(build_dir)?;
 
