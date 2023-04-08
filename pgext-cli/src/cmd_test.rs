@@ -1,7 +1,8 @@
 use std::io::{BufWriter, Write as _};
 use std::time::Duration;
+use std::vec;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
@@ -13,8 +14,90 @@ use crate::config::{edit_pgconf, load_workspace_config};
 use crate::plugin::{find_plugin, load_plugin_db, CheckStrategy, InstallStrategy};
 use crate::resolve_pgxs::pgxs_installcheck;
 use crate::test_control::{pgx_start_pg15, pgx_stop_pg15, ExtTestControl};
-use crate::{CmdTest, CmdTestAll, CmdTestPair};
+use crate::{CmdDemo, CmdTest, CmdTestAll, CmdTestSingle};
 
+/// Run the `demo` subcommand
+pub fn cmd_demo(cmd: CmdDemo) -> Result<()> {
+  let db = load_plugin_db()?;
+  let last = find_plugin(&db, &cmd.name)?;
+  let mut exts = vec![cmd.name.clone()];
+  let mut failed = vec![];
+
+  let pbar = ProgressBar::new(db.plugins.len() as u64).with_style(ProgressStyle::with_template(
+    "{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} {msg}",
+  )?);
+
+  pbar.enable_steady_tick(Duration::from_millis(100));
+
+  let installed = exts.join(", ");
+  match cmd_test(
+    CmdTest {
+      exts: exts.clone(),
+      check_last: true,
+      run_custom_sql: false,
+    },
+    Some(pbar.clone()),
+  ) {
+    Ok(_) => {
+      pbar.println(format!("{}: {}", style("Ok").green().bold(), style(installed).bold(),));
+    }
+    Err(e) => {
+      pbar.println(format!(
+        "{}: {} {}",
+        style("Error").red().bold(),
+        style(installed).bold(),
+        e
+      ));
+      failed.push(cmd.name.clone());
+    }
+  }
+  pbar.inc(1);
+
+  let mut last_ext_name = exts.pop().unwrap();
+
+  for plugin in db.plugins {
+    if plugin.name == last.name {
+      continue;
+    }
+    exts.push(plugin.name.clone());
+    exts.push(last_ext_name);
+    pbar.set_message(plugin.name.clone());
+    let installed = exts.join(", ");
+    match cmd_test(
+      CmdTest {
+        exts: exts.clone(),
+        check_last: true,
+        run_custom_sql: false,
+      },
+      Some(pbar.clone()),
+    ) {
+      Ok(_) => {
+        last_ext_name = exts.pop().unwrap();
+        pbar.println(format!("{}: {}", style("Ok").green().bold(), style(&installed).bold()));
+      }
+      Err(e) => {
+        pbar.println(format!(
+          "{}: {} {}",
+          style("Error").red().bold(),
+          style(&installed).bold(),
+          e
+        ));
+        last_ext_name = exts.pop().unwrap();
+        failed.push(exts.pop().unwrap());
+      }
+    }
+    pbar.inc(1);
+  }
+  pbar.finish_with_message("Done");
+
+  if !failed.is_empty() {
+    println!("{}:\n{}", style("Failed when adding").red().bold(), failed.join("\n"));
+  }
+
+  Ok(())
+}
+
+/// Run the `test-all` subcommand
 pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   let db = load_plugin_db()?;
   let mut failed = vec![];
@@ -68,8 +151,8 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
 
   for plugin in db.plugins {
     pbar.set_message(plugin.name.clone());
-    match cmd_test(
-      CmdTest {
+    match cmd_test_single(
+      CmdTestSingle {
         name: plugin.name.clone(),
         check: cmd.check,
       },
@@ -110,7 +193,8 @@ pub fn cmd_test_all(cmd: CmdTestAll) -> Result<()> {
   Ok(())
 }
 
-pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
+/// Run the `test` subcommand
+pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
   let custom_sql = if cmd.run_custom_sql {
     Some(std::fs::read_to_string("custom.sql")?)
   } else {
@@ -156,7 +240,7 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   client.create_exn_if_absent("pgx_show_hooks")?;
 
   for plugin in &plugins {
-    if cmd.check {
+    if cmd.check_last {
       let check_plugin = plugins.last().unwrap();
       match check_plugin.check_strategy {
         CheckStrategy::Install => {
@@ -196,13 +280,13 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
     client.drop_exns_for(plugin, println)?;
   }
 
-  if cmd.check {
-    if let Some(second) = plugins.last() {
-      let name_tag = format!("{}@{}", second.name, second.version);
+  if cmd.check_last {
+    if let Some(check_plugin) = plugins.last() {
+      let name_tag = format!("{}@{}", check_plugin.name, check_plugin.version);
       let workdir = create_workdir()?;
       let build_dir = workdir.join("builds").join(name_tag);
 
-      println!("{} {}", style("Regression Testing").bold().blue(), second.name);
+      println!("{} {}", style("Regression Testing").bold().blue(), check_plugin.name);
       let installs = plugins
         .iter()
         .filter_map(|x| match x.install_strategy {
@@ -214,7 +298,7 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
         .take(plugins.len() - 1)
         .collect_vec();
       if let Err(err) = pgxs_installcheck(
-        second,
+        check_plugin,
         Some((&installs, &shared_preloads)),
         &build_dir,
         &config.pg_config,
@@ -223,8 +307,9 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
         println(format!(
           "{} - {}",
           style("Failed").bold().red(),
-          style(&second.name).bold()
+          style(&check_plugin.name).bold()
         ));
+        bail!("Failed install check");
       }
     }
   }
@@ -233,7 +318,8 @@ pub fn cmd_test_pair(cmd: CmdTestPair, pbar: Option<ProgressBar>) -> Result<Vec<
   Ok(hooks)
 }
 
-pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
+/// Run the `test-single` subcommand
+pub fn cmd_test_single(cmd: CmdTestSingle, pbar: Option<ProgressBar>) -> Result<Vec<String>> {
   let db = load_plugin_db()?;
   let config = load_workspace_config()?;
   let plugin = find_plugin(&db, &cmd.name)?;

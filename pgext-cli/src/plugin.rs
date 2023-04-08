@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 
+/// Git download metadata
 #[derive(Deserialize, Clone)]
 pub struct GitDownload {
   pub url: String,
@@ -72,12 +73,14 @@ pub struct PluginDb {
   pub plugins: Vec<Plugin>,
 }
 
+/// Loads `plugindb` from file
 pub fn load_plugin_db() -> Result<PluginDb> {
   let plugindb = std::fs::read_to_string("plugindb.toml").context("Failed to open plugindb.toml")?;
   let plugindb: PluginDb = toml::from_str(&plugindb).context("Failed to parse plugindb.toml")?;
   Ok(plugindb)
 }
 
+/// Gets a plugin in `plugindb`
 pub fn find_plugin(db: &PluginDb, name: &str) -> Result<Plugin> {
   if let Some(plugin) = db.plugins.iter().find(|x| x.name == name) {
     Ok(plugin.clone())

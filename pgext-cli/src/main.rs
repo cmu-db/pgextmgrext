@@ -10,7 +10,7 @@ mod test_control;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-/// Simple program to greet a person
+/// PgExtMgrExt - A PostgresSQL Extension Manager As an Extension
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -26,8 +26,16 @@ enum Commands {
   InstallAll(CmdInstallAll),
   List(CmdList),
   Test(CmdTest),
-  TestPair(CmdTestPair),
+  TestSingle(CmdTestSingle),
   TestAll(CmdTestAll),
+  Demo(CmdDemo),
+}
+
+/// Repeatedly run one extension's unit test while installing all other extensions one by one
+#[derive(Parser, Debug)]
+pub struct CmdDemo {
+  /// The name of the extension (in `plugindb.toml`)
+  name: String,
 }
 
 /// Init workspace
@@ -67,35 +75,36 @@ pub struct CmdInstallAll {
 #[derive(Parser, Debug)]
 pub struct CmdList {}
 
-/// Install extension
+/// Test one extension
 #[derive(Parser, Debug)]
-pub struct CmdTest {
+pub struct CmdTestSingle {
   /// The name of the extension (in `plugindb.toml`)
   name: String,
-  /// Run installchecks
+  /// Run extension unit tests
   #[clap(long)]
   check: bool,
 }
 
-/// Testing compatibility between two extensions
+/// Testing compatibility of a list of extensions
 #[derive(Parser, Debug)]
-pub struct CmdTestPair {
+pub struct CmdTest {
   /// extension names in plugindb
   exts: Vec<String>,
-  /// Run installchecks
+  /// Run last extension's unit tests after installing all extensions
   #[clap(long)]
-  check: bool,
+  check_last: bool,
   /// Run custom SQLs after installing all extensions
   #[clap(long)]
   run_custom_sql: bool,
 }
 
-/// Install all extensions in plugindb
+/// Test all extensions in plugindb individually
 #[derive(Parser, Debug)]
 pub struct CmdTestAll {
   /// Dump data to file
   #[clap(long)]
   dump_to: Option<String>,
+  /// Run extension unit tests
   #[clap(long)]
   check: bool,
 }
@@ -118,8 +127,8 @@ fn main() -> Result<()> {
     Commands::Test(cmd) => {
       cmd_test::cmd_test(cmd, None)?;
     }
-    Commands::TestPair(cmd) => {
-      cmd_test::cmd_test_pair(cmd, None)?;
+    Commands::TestSingle(cmd) => {
+      cmd_test::cmd_test_single(cmd, None)?;
     }
     Commands::TestAll(cmd) => {
       cmd_test::cmd_test_all(cmd)?;
@@ -127,6 +136,7 @@ fn main() -> Result<()> {
     Commands::InstallHook(_) => {
       cmd_install::cmd_install_hook()?;
     }
+    Commands::Demo(cmd) => cmd_test::cmd_demo(cmd)?,
   }
   Ok(())
 }

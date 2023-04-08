@@ -5,6 +5,7 @@ use anyhow::Result;
 use crate::config::WorkspaceConfig;
 use crate::CmdInit;
 
+/// Initialze the workspace
 pub fn cmd_init(cmd: CmdInit) -> Result<()> {
   println!("pg_config: {}", cmd.pg_config);
   println!("pg_data: {}", cmd.pg_data);
@@ -21,6 +22,7 @@ pub fn cmd_init(cmd: CmdInit) -> Result<()> {
     pg_data: cmd.pg_data,
     pg_contrib: cmd.pg_contrib,
   };
+  // saving config
   std::fs::write(
     PathBuf::from("pgextworkdir").join("config.toml"),
     toml::to_string_pretty(&config)?,

@@ -9,6 +9,7 @@ use crate::config::load_workspace_config;
 use crate::plugin::load_plugin_db;
 use crate::{CmdInstall, CmdInstallAll};
 
+/// Create work directory if not exists
 pub fn create_workdir() -> Result<PathBuf> {
   std::fs::create_dir_all("pgextworkdir")?;
   std::fs::create_dir_all("pgextworkdir/downloads")?;
@@ -16,6 +17,7 @@ pub fn create_workdir() -> Result<PathBuf> {
   Ok(PathBuf::new().join("pgextworkdir"))
 }
 
+/// Install all extensions
 pub fn cmd_install_all(cmd: CmdInstallAll) -> Result<()> {
   let db = load_plugin_db()?;
   let mut failed = vec![];
@@ -40,6 +42,7 @@ pub fn cmd_install_all(cmd: CmdInstallAll) -> Result<()> {
   Ok(())
 }
 
+/// Install an extension
 pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
   let db = load_plugin_db()?;
   let workdir = create_workdir()?;
@@ -111,6 +114,7 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
   }
 }
 
+/// Install `pgx_show_hooks` and `pgx_trace_hooks`
 pub fn cmd_install_hook() -> Result<()> {
   let config = load_workspace_config()?;
 

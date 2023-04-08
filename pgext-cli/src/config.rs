@@ -13,12 +13,14 @@ pub struct WorkspaceConfig {
   pub pg_contrib: String,
 }
 
+/// Load the workspace config
 pub fn load_workspace_config() -> Result<WorkspaceConfig> {
   let config = std::fs::read_to_string(PathBuf::from("pgextworkdir").join("config.toml"))
     .context("cannot find workspace config, did you run init?")?;
   Ok(toml::from_str(&config)?)
 }
 
+/// Edit `postgresql.conf` preload libraries list
 pub fn edit_pgconf(db: &PluginDb, config: &WorkspaceConfig, plugins: &[Plugin]) -> Result<Vec<String>> {
   let conf = PathBuf::from(&config.pg_data).join("postgresql.conf");
   let pgconf = std::fs::read_to_string(&conf)?;

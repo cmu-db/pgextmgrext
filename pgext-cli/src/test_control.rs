@@ -5,14 +5,23 @@ use postgres::{Client, NoTls};
 
 use crate::plugin::{InstallStrategy, Plugin};
 
+/// An extension test controller trait
 pub trait ExtTestControl {
+  /// Connect to an postgres database for testing
   fn connect_test_db() -> Result<Client>;
+  /// Handle extensions already installed in the database before testing
   fn handle_installed<F: Fn(String)>(&mut self, println: F) -> Result<()>;
+  /// Display `shared_preload_libraries`
   fn show_preload_libraries<F: Fn(String)>(&mut self, println: F) -> Result<()>;
+  /// Run `CREATE EXTENSION IF NOT EXISTS` for the plugin and its dependencies
   fn create_exns_for(&mut self, plugin: &Plugin) -> Result<()>;
+  /// Run `DROP EXTENSION` for the plugin and its dependencies
   fn drop_exns_for<F: Fn(String)>(&mut self, plugin: &Plugin, println: F) -> Result<()>;
+  /// Show all installed hooks
   fn show_hooks_all<F: Fn(String)>(&mut self, println: F) -> Result<Vec<String>>;
+  /// Create an extension if not exists
   fn create_exn_if_absent(&mut self, extname: &str) -> Result<u64>;
+  /// Drop an extension
   fn drop_exn(&mut self, extname: &str) -> Result<u64>;
 }
 
@@ -124,6 +133,7 @@ impl ExtTestControl for Client {
   }
 }
 
+/// Start the pgx-managed postgres 15 instance
 pub fn pgx_start_pg15() -> Result<()> {
   let output = cmd!("cargo", "pgx", "start", "pg15")
     .dir("pgx_show_hooks")
@@ -141,6 +151,7 @@ pub fn pgx_start_pg15() -> Result<()> {
   Ok(())
 }
 
+/// Stop the pgx-managed postgres 15 instance
 pub fn pgx_stop_pg15() -> Result<()> {
   cmd!("cargo", "pgx", "stop", "pg15")
     .dir("pgx_show_hooks")
