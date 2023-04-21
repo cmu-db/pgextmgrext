@@ -401,3 +401,24 @@ version = "3.3.2"
 download_url_tar = "https://download.osgeo.org/postgis/source/postgis-3.3.2.tar.gz"
 resolver = "pgxs"
 install_strategy = "install"
+
+[[plugins]]
+name = "pgext_framework"
+version = "0.0.1"
+no_download = true
+resolver = "pgsrctree"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pgext_pg_hint_plan"
+version = "0.0.1"
+no_download = true
+resolver = "pgsrctree"
+install_strategy = "preload+install"
+
+[[plugins]]
+name = "pgext_test_plugin"
+version = "0.0.1"
+no_download = true
+resolver = "pgsrctree"
+install_strategy = "preload+install"

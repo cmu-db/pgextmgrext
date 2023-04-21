@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use anyhow::{bail, Context, Result};
+use itertools::Itertools;
 use serde::Deserialize;
 
 /// Git download metadata
@@ -101,13 +102,22 @@ pub fn collect_shared_preload_libraries(db: &PluginDb, plugins: &[Plugin]) -> Ve
     }
   }
   // TODO(yuchen): this need to be ordered + unique (is there a linked hashmap)?
-  let mut preloads = HashSet::<String>::new();
+  let mut preloads = Vec::new();
+  let mut preloads_contains = HashSet::new();
   for plugin in plugins.iter() {
-    collect_helper(db, plugin, &mut preloads);
+    let mut this_preloads = HashSet::new();
+    collect_helper(db, plugin, &mut this_preloads);
+    for preload in this_preloads.iter().sorted() {
+      if !preloads_contains.contains(preload) {
+        preloads_contains.insert(preload.clone());
+        preloads.push(preload.clone());
+      }
+    }
     if let InstallStrategy::Preload | InstallStrategy::PreloadInstall = plugin.install_strategy {
-      preloads.insert(plugin.name.clone());
+      preloads.push(plugin.name.clone());
+      preloads_contains.insert(plugin.name.clone());
     }
   }
 
-  preloads.into_iter().collect::<Vec<String>>()
+  preloads
 }

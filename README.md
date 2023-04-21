@@ -30,3 +30,15 @@ SELECT * FROM show_hooks.all();
 cargo run -- test pg_stat_statements
 cargo run -- test-all --dump-to result.csv
 ```
+
+## Pgext Framework Quickstart
+
+```
+# Install everything
+cargo run -- install-hook
+# Compile two plugins
+cd test_plugin && make PG_CONFIG=~/.pgx/15.2/pgx-install/bin/pg_config install PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
+git clone https://github.com/skyzh/pg_hint_plan/ && cd pg_hint_plan && make PG_CONFIG=~/.pgx/15.2/pgx-install/bin/pg_config install PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
+# Modify the config to include all three extensions
+cargo run -- test pgext_framework pgext_test_plugin pgext_pg_hint_plan
+```
