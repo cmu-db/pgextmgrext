@@ -98,6 +98,12 @@ fn all() -> SetOfIterator<'static, String> {
 }
 
 #[pg_extern]
-fn hooks() -> SetOfIterator<'static, String> {
-  SetOfIterator::new(unsafe { PLANNER_HOOKS.clone().into_iter().map(|(name, _)| name) })
+fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), name!(plugin, String))> {
+  TableIterator::new(unsafe {
+    PLANNER_HOOKS
+      .clone()
+      .into_iter()
+      .enumerate()
+      .map(|(id, (name, _))| ("planner_hook".to_string(), id as i64, name))
+  })
 }
