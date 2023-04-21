@@ -9,6 +9,8 @@ static mut PLANNER_HOOKS: Vec<(String, pgx::pg_sys::planner_hook_type)> = Vec::n
 static mut NEXT_HOOK_ID: usize = 0;
 static mut CURRENT_PLANNER_HOOK: pgx::pg_sys::planner_hook_type = None;
 
+const ENABLE_LOGGING: bool = true;
+
 fn get_next_planner_hook() -> pgx::pg_sys::planner_hook_type {
   unsafe {
     let id = NEXT_HOOK_ID;
@@ -45,7 +47,10 @@ pub unsafe extern "C" fn pgext_planner_hook(
   cursor_options: ::std::os::raw::c_int,
   bound_params: pgx::pg_sys::ParamListInfo,
 ) -> *mut pgx::pg_sys::PlannedStmt {
-  let (_, hook) = PLANNER_HOOKS[0];
+  let (ref name, hook) = PLANNER_HOOKS[0];
+  if ENABLE_LOGGING {
+    info!("pgext_planner_hook: {}", name);
+  }
   hook.unwrap()(parse, query_string, cursor_options, bound_params)
 }
 
@@ -57,7 +62,10 @@ unsafe fn pgext_planner_hook_cb(
   cursor_options: ::std::os::raw::c_int,
   bound_params: pgx::pg_sys::ParamListInfo,
 ) -> *mut pgx::pg_sys::PlannedStmt {
-  if let Some((_, hook)) = PLANNER_HOOKS.get(id + 1) {
+  if let Some((name, hook)) = PLANNER_HOOKS.get(id + 1) {
+    if ENABLE_LOGGING {
+      info!("pgext_planner_hook: {}", name);
+    }
     // find the next extension in the saved planner hooks and call it
     hook.unwrap()(parse, query_string, cursor_options, bound_params)
   } else {
