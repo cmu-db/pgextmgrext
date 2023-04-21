@@ -422,3 +422,10 @@ version = "0.0.1"
 no_download = true
 resolver = "pgsrctree"
 install_strategy = "preload+install"
+
+[[plugins]]
+name = "pgext_pg_stat_statements"
+version = "0.0.1"
+no_download = true
+resolver = "pgsrctree"
+install_strategy = "preload+install"

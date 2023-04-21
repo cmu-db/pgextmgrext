@@ -37,8 +37,10 @@ cargo run -- test-all --dump-to result.csv
 # Install everything
 cargo run -- install-hook
 # Compile two plugins
-cd test_plugin && make PG_CONFIG=~/.pgx/15.2/pgx-install/bin/pg_config install PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
-git clone https://github.com/skyzh/pg_hint_plan/ && cd pg_hint_plan && make PG_CONFIG=~/.pgx/15.2/pgx-install/bin/pg_config install PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
+cd test_plugin && make PG_CONFIG=~/.pgx/15.2/pgx-install/bin/pg_config PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
+git clone https://github.com/skyzh/pg_hint_plan/ && cd pg_hint_plan && make PG_CONFIG=~/.pgx/15.2/pgx-install/bin/pg_config PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
+git clone https://github.com/yliang412/pg_stat_statements && cd pg_stat_statements && make USE_PGXS=1 PG_CONFIG=~/.pgx/15.2/pgx-install/bin/pg_config PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
+
 # Modify the config to include all three extensions
-cargo run -- test pgext_framework pgext_test_plugin pgext_pg_hint_plan
+cargo run -- test pgext_framework pgext_test_plugin pgext_pg_stat_statements pgext_pg_hint_plan
 ```
