@@ -132,13 +132,9 @@ pub fn cmd_install_hook() -> Result<()> {
     .dir("pgx_trace_hooks")
     .run()?;
 
-  println!(
-    "{} {}",
-    style("Building").blue().bold(),
-    style("pgext_framework").bold()
-  );
+  println!("{} {}", style("Building").blue().bold(), style("pgextmgr").bold());
   cmd!("cargo", "pgx", "install", "-c", &config.pg_config)
-    .dir("pgext_framework")
+    .dir("pgextmgr")
     .run()?;
 
   cmd!("cargo", "pgx", "start", "pg15").dir("pgx_show_hooks").run()?;

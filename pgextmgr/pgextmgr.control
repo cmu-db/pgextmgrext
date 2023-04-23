@@ -1,0 +1,6 @@
+comment = 'pgextmgr:  Created by pgx'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/pgextmgr'
+relocatable = false
+superuser = true
+schema = 'pgextmgr'

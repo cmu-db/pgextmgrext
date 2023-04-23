@@ -1,7 +1,6 @@
 [submodule "pg_stat_statements"]
 	path = pg_stat_statements
 	url = https://github.com/yliang412/pg_stat_statements.git
-
 [submodule "pg_hint_plan"]
 	path = pg_hint_plan
 	url = https://github.com/skyzh/pg_hint_plan.git

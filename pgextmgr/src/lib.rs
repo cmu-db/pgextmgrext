@@ -22,7 +22,8 @@ fn get_next_planner_hook() -> pgx::pg_sys::planner_hook_type {
 #[pg_guard]
 #[no_mangle]
 unsafe extern "C" fn __pgext_before_init(name: *const pgx::ffi::c_char) {
-  INSTALLED_PLUGINS.push(std::ffi::CStr::from_ptr(name).to_string_lossy().into_owned());
+  let plugin_name = std::ffi::CStr::from_ptr(name).to_string_lossy().into_owned();
+  INSTALLED_PLUGINS.push(plugin_name.clone());
   let hook = get_next_planner_hook();
   CURRENT_PLANNER_HOOK = hook;
   pgx::pg_sys::planner_hook = hook;
@@ -101,8 +102,14 @@ macro_rules! generate_planner_hook_copy {
 generate_planner_hook_copy! { 0, 1, 2, 3, 4, 5 }
 
 #[pg_extern]
-fn all() -> SetOfIterator<'static, String> {
-  SetOfIterator::new(unsafe { INSTALLED_PLUGINS.clone() }.into_iter())
+fn all() -> TableIterator<'static, (name!(order, i64), name!(plugin, String))> {
+  TableIterator::new(unsafe {
+    INSTALLED_PLUGINS
+      .clone()
+      .into_iter()
+      .enumerate()
+      .map(|(id, name)| (id as i64, name))
+  })
 }
 
 #[pg_extern]
@@ -114,4 +121,57 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
       .enumerate()
       .map(|(id, (name, _))| ("planner_hook".to_string(), id as i64, name))
   })
+}
+
+#[cfg(any(test, feature = "pg_test"))]
+#[pg_schema]
+pub mod tests {
+  use pgx::prelude::*;
+
+  #[pg_test]
+  #[search_path(@extschema@)]
+  fn test_plugin_install() -> Result<(), spi::Error> {
+    Spi::run("LOAD 'pgext_test_plugin'")?;
+    Spi::run("LOAD 'pgext_pg_stat_statements'")?;
+    Spi::run("LOAD 'pgext_pg_hint_plan'")?;
+    Spi::run("CREATE EXTENSION pgext_test_plugin;")?;
+    Spi::run("CREATE EXTENSION pgext_pg_stat_statements;")?;
+    Spi::run("CREATE EXTENSION pgext_pg_hint_plan;")?;
+
+    Spi::connect(|client| {
+      let table = client.select("SELECT * FROM pgextmgr.all()", None, None)?;
+      assert_eq!(table.columns()?, 2);
+      assert_eq!(table.len(), 3);
+      let plugins = table
+        .into_iter()
+        .map(|x| x.get_datum_by_name("plugin").unwrap().value::<String>().unwrap())
+        .collect::<Vec<_>>();
+      assert_eq!(
+        plugins,
+        vec![
+          Some("pgext_test_plugin".to_string()),
+          Some("pgext_pg_stat_statements".to_string()),
+          Some("pgext_pg_hint_plan".to_string())
+        ]
+      );
+
+      Ok::<_, pgx::spi::Error>(())
+    })?;
+
+    Ok(())
+  }
+}
+
+/// This module is required by `cargo pgx test` invocations.
+/// It must be visible at the root of your extension crate.
+#[cfg(test)]
+pub mod pg_test {
+  pub fn setup(_options: Vec<&str>) {
+    // perform one-off initialization when the pg_test framework starts
+  }
+
+  pub fn postgresql_conf_options() -> Vec<&'static str> {
+    // return any postgresql.conf settings that are required for your tests
+    vec![]
+  }
 }
