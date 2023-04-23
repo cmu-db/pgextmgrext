@@ -31,12 +31,12 @@ fn patch_makefile(content: &str, patch: &str) -> Result<String> {
   if content.contains(PGEXT_CLI_BEGIN) {
     let (before, rest) = content.split_once(PGEXT_CLI_BEGIN).unwrap();
     let (_, after) = rest.split_once(PGEXT_CLI_END).unwrap();
-    return Ok(format!(
+    Ok(format!(
       "{}{}{}{}{}",
       before, PGEXT_CLI_BEGIN, patch, PGEXT_CLI_END, after
-    ));
+    ))
   } else {
-    return Ok(format!("{}{}{}{}", content, PGEXT_CLI_BEGIN, patch, PGEXT_CLI_END));
+    Ok(format!("{}{}{}{}", content, PGEXT_CLI_BEGIN, patch, PGEXT_CLI_END))
   }
 }
 

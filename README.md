@@ -44,3 +44,10 @@ git clone https://github.com/yliang412/pg_stat_statements && cd pg_stat_statemen
 # Modify the config to include all three extensions
 cargo run -- test pgext_framework pgext_test_plugin pgext_pg_stat_statements pgext_pg_hint_plan
 ```
+
+# Lints
+
+```
+cargo +nightly fmt
+cargo clippy
+```
