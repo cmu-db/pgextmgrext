@@ -48,7 +48,7 @@ pub fn cmd_demo(cmd: CmdDemo) -> Result<()> {
         style(installed).bold(),
         e
       ));
-      failed.push(cmd.name.clone());
+      failed.push(cmd.name);
     }
   }
   pbar.inc(1);
@@ -247,7 +247,7 @@ pub fn cmd_test(cmd: CmdTest, pbar: Option<ProgressBar>) -> Result<Vec<String>> 
           client.create_exns_for(check_plugin)?;
         }
         CheckStrategy::NoInstall => {
-          if check_plugin.dependencies.iter().find(|x| x == &&plugin.name).is_none() {
+          if !check_plugin.dependencies.iter().any(|x| x == &plugin.name) {
             client.create_exns_for(check_plugin)?;
           } else {
             println!("skipping create extension for dependency {}", plugin.name);

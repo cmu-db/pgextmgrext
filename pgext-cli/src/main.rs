@@ -31,7 +31,8 @@ enum Commands {
   Demo(CmdDemo),
 }
 
-/// Repeatedly run one extension's unit test while installing all other extensions one by one
+/// Repeatedly run one extension's unit test while installing all other
+/// extensions one by one
 #[derive(Parser, Debug)]
 pub struct CmdDemo {
   /// The name of the extension (in `plugindb.toml`)

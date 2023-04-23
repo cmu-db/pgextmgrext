@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: rustfmt, clippy
+      - name: Check code format
+        working-directory: ./code
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        working-directory: ./code
+        run: cargo clippy --all-targets --all-features -- -D warnings
