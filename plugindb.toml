@@ -403,7 +403,7 @@ resolver = "pgxs"
 install_strategy = "install"
 
 [[plugins]]
-name = "pgext_framework"
+name = "pgextmgr"
 version = "0.0.1"
 no_download = true
 resolver = "pgsrctree"

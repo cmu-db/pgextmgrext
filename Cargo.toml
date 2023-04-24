@@ -2,10 +2,22 @@
 members = [
     "pgext-cli",
     "pgext-hook-macros",
-]
-exclude = [
     "pgx_show_hooks",
     "pgx_trace_hooks",
-    "pgext_framework",
+    "pgextmgr",
+]
+exclude = [   
     "pgextworkdir",
 ]
+
+[patch.crates-io]
+pgx-pg-sys = { git = "https://github.com/skyzh/pgx", branch = "skyzh/add-more-hooks" }
+
+[profile.dev]
+panic = "unwind"
+
+[profile.release]
+panic = "unwind"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
