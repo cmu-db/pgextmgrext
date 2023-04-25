@@ -1,7 +1,7 @@
 use pgext_hook_macros::{for_all_hooks, for_all_plpgsql_hooks};
-use pgx::prelude::*;
+use pgrx::prelude::*;
 
-pgx::pg_module_magic!();
+pgrx::pg_module_magic!();
 
 fn render_addr<T>(func: Option<*const T>) -> Option<String> {
   func.and_then(|f| {

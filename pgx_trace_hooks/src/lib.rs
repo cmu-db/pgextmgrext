@@ -1,6 +1,6 @@
-use pgx::prelude::*;
+use pgrx::prelude::*;
 
-pgx::pg_module_magic!();
+pgrx::pg_module_magic!();
 
 static mut PREV_EXECUTOR_START_HOOK: pg_sys::ExecutorStart_hook_type = None;
 static mut PREV_EXECUTOR_RUN_HOOK: pg_sys::ExecutorRun_hook_type = None;
@@ -61,6 +61,7 @@ extern "C" fn executor_end_hook(query_desc: *mut pg_sys::QueryDesc) {
   }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[pg_guard]
 extern "C" fn process_utility_hook(
   pstmt: *mut pg_sys::PlannedStmt,

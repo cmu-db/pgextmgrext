@@ -110,7 +110,7 @@ install_strategy = "preload+install"
 name = "pg_tiktoken"
 version = "0.0.1"
 download_git = { url = "https://github.com/kelvich/pg_tiktoken", rev = "801f84f" }
-resolver = "pgx"
+resolver = "pgrx"
 
 
 # TODO(yuchen): Error - sed: 1: "postgres.c": extra characters at the end of p command

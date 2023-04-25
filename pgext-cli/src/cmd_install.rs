@@ -82,10 +82,10 @@ pub fn cmd_install(cmd: CmdInstall) -> Result<()> {
 
     match plugin.resolver.as_str() {
       "pgxs" => crate::resolve_pgxs::resolve_build_pgxs(plugin, &build_dir, &workspace_config.pg_config, cmd.verbose)?,
-      "pgx" => {
+      "pgrx" => {
         cmd!(
           "cargo",
-          "pgx",
+          "pgrx",
           "install",
           "-c",
           &workspace_config.pg_config,
@@ -119,7 +119,7 @@ pub fn cmd_install_hook() -> Result<()> {
   let config = load_workspace_config()?;
 
   println!("{} {}", style("Building").blue().bold(), style("pgx_show_hooks").bold());
-  cmd!("cargo", "pgx", "install", "-c", &config.pg_config)
+  cmd!("cargo", "pgrx", "install", "-c", &config.pg_config)
     .dir("pgx_show_hooks")
     .run()?;
 
@@ -128,16 +128,16 @@ pub fn cmd_install_hook() -> Result<()> {
     style("Building").blue().bold(),
     style("pgx_trace_hooks").bold()
   );
-  cmd!("cargo", "pgx", "install", "-c", &config.pg_config)
+  cmd!("cargo", "pgrx", "install", "-c", &config.pg_config)
     .dir("pgx_trace_hooks")
     .run()?;
 
   println!("{} {}", style("Building").blue().bold(), style("pgextmgr").bold());
-  cmd!("cargo", "pgx", "install", "-c", &config.pg_config)
+  cmd!("cargo", "pgrx", "install", "-c", &config.pg_config)
     .dir("pgextmgr")
     .run()?;
 
-  cmd!("cargo", "pgx", "start", "pg15").dir("pgx_show_hooks").run()?;
+  cmd!("cargo", "pgrx", "start", "pg15").dir("pgx_show_hooks").run()?;
 
   println!(
     "{} {}",
@@ -155,7 +155,7 @@ pub fn cmd_install_hook() -> Result<()> {
   println!("{}: setting your user as a superuser", style("Configure").blue().bold(),);
   client.execute(&format!("ALTER USER {} WITH SUPERUSER;", whoami), &[])?;
 
-  cmd!("cargo", "pgx", "stop", "pg15").dir("pgx_show_hooks").run()?;
+  cmd!("cargo", "pgrx", "stop", "pg15").dir("pgx_show_hooks").run()?;
 
   println!(
     "{} {}",

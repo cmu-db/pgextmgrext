@@ -10,9 +10,6 @@ exclude = [
     "pgextworkdir",
 ]
 
-[patch.crates-io]
-pgx-pg-sys = { git = "https://github.com/skyzh/pgx", branch = "skyzh/add-more-hooks" }
-
 [profile.dev]
 panic = "unwind"
 
