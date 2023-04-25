@@ -23,7 +23,7 @@ fn get_next_planner_hook() -> pgrx::pg_sys::planner_hook_type {
 #[no_mangle]
 unsafe extern "C" fn __pgext_before_init(name: *const pgrx::ffi::c_char) {
   let plugin_name = std::ffi::CStr::from_ptr(name).to_string_lossy().into_owned();
-  INSTALLED_PLUGINS.push(plugin_name.clone());
+  INSTALLED_PLUGINS.push(plugin_name);
   let hook = get_next_planner_hook();
   CURRENT_PLANNER_HOOK = hook;
   pgrx::pg_sys::planner_hook = hook;
@@ -131,9 +131,6 @@ pub mod tests {
   #[pg_test]
   #[search_path(@extschema@)]
   fn test_plugin_install() -> Result<(), spi::Error> {
-    Spi::run("LOAD 'pgext_test_plugin'")?;
-    Spi::run("LOAD 'pgext_pg_stat_statements'")?;
-    Spi::run("LOAD 'pgext_pg_hint_plan'")?;
     Spi::run("CREATE EXTENSION pgext_test_plugin;")?;
     Spi::run("CREATE EXTENSION pgext_pg_stat_statements;")?;
     Spi::run("CREATE EXTENSION pgext_pg_hint_plan;")?;
@@ -149,9 +146,9 @@ pub mod tests {
       assert_eq!(
         plugins,
         vec![
-          Some("pgext_test_plugin".to_string()),
           Some("pgext_pg_stat_statements".to_string()),
-          Some("pgext_pg_hint_plan".to_string())
+          Some("pgext_pg_hint_plan".to_string()),
+          Some("pgext_test_plugin".to_string()),
         ]
       );
 
@@ -172,6 +169,6 @@ pub mod pg_test {
 
   pub fn postgresql_conf_options() -> Vec<&'static str> {
     // return any postgresql.conf settings that are required for your tests
-    vec![]
+    vec!["shared_preload_libraries = 'pgextmgr,pgext_pg_stat_statements,pgext_pg_hint_plan,pgext_test_plugin'"]
   }
 }

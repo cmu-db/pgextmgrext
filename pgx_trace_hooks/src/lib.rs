@@ -61,6 +61,7 @@ extern "C" fn executor_end_hook(query_desc: *mut pg_sys::QueryDesc) {
   }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[pg_guard]
 extern "C" fn process_utility_hook(
   pstmt: *mut pg_sys::PlannedStmt,

@@ -39,7 +39,7 @@ cargo run -- install-hook
 # Compile two plugins
 cd test_plugin && make PG_CONFIG=~/.pgrx/15.2/pgrx-install/bin/pg_config PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
 git clone https://github.com/skyzh/pg_hint_plan/ && cd pg_hint_plan && make PG_CONFIG=~/.pgrx/15.2/pgrx-install/bin/pg_config PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
-git clone https://github.com/yliang412/pg_stat_statements && cd pg_stat_statements && make USE_pgrxS=1 PG_CONFIG=~/.pgrx/15.2/pgrx-install/bin/pg_config PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
+git clone https://github.com/yliang412/pg_stat_statements && cd pg_stat_statements && make USE_PGXS=1 PG_CONFIG=~/.pgrx/15.2/pgrx-install/bin/pg_config PG_LDFLAGS=-Wl,-U,___pgext_before_init,-U,___pgext_after_init install
 
 # Modify the config to include all three extensions
 cargo run -- test pgextmgr pgext_test_plugin pgext_pg_stat_statements pgext_pg_hint_plan
