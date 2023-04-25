@@ -135,7 +135,7 @@ impl ExtTestControl for Client {
 
 /// Start the pgx-managed postgres 15 instance
 pub fn pgx_start_pg15() -> Result<()> {
-  let output = cmd!("cargo", "pgx", "start", "pg15")
+  let output = cmd!("cargo", "pgrx", "start", "pg15")
     .dir("pgx_show_hooks")
     .stderr_to_stdout()
     .stdout_capture()
@@ -153,7 +153,7 @@ pub fn pgx_start_pg15() -> Result<()> {
 
 /// Stop the pgx-managed postgres 15 instance
 pub fn pgx_stop_pg15() -> Result<()> {
-  cmd!("cargo", "pgx", "stop", "pg15")
+  cmd!("cargo", "pgrx", "stop", "pg15")
     .dir("pgx_show_hooks")
     .stderr_null()
     .stdout_null()
