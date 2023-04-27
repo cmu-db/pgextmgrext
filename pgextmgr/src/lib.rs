@@ -131,7 +131,7 @@ pub mod tests {
   #[pg_test]
   #[search_path(@extschema@)]
   fn test_plugin_install() -> Result<(), spi::Error> {
-    Spi::run("CREATE EXTENSION pgext_test_plugin;")?;
+    Spi::run("CREATE EXTENSION pgext_pg_poop;")?;
     Spi::run("CREATE EXTENSION pgext_pg_stat_statements;")?;
     Spi::run("CREATE EXTENSION pgext_pg_hint_plan;")?;
 
@@ -148,7 +148,7 @@ pub mod tests {
         vec![
           Some("pgext_pg_stat_statements".to_string()),
           Some("pgext_pg_hint_plan".to_string()),
-          Some("pgext_test_plugin".to_string()),
+          Some("pgext_pg_poop".to_string()),
         ]
       );
 
@@ -169,6 +169,6 @@ pub mod pg_test {
 
   pub fn postgresql_conf_options() -> Vec<&'static str> {
     // return any postgresql.conf settings that are required for your tests
-    vec!["shared_preload_libraries = 'pgextmgr,pgext_pg_stat_statements,pgext_pg_hint_plan,pgext_test_plugin'"]
+    vec!["shared_preload_libraries = 'pgextmgr,pgext_pg_stat_statements,pgext_pg_hint_plan,pgext_pg_poop'"]
   }
 }

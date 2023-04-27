@@ -417,7 +417,7 @@ resolver = "pgsrctree"
 install_strategy = "preload+install"
 
 [[plugins]]
-name = "pgext_test_plugin"
+name = "pgext_pg_poop"
 version = "0.0.1"
 no_download = true
 resolver = "pgsrctree"
