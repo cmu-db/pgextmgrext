@@ -7,7 +7,7 @@ extern PGDLLIMPORT void __attribute__((weak)) __pgext_after_init();
 // end pgext APIs
 
 void _PG_init() {
-  __pgext_before_init("pgext_test_plugin");
+  __pgext_before_init("pgext_pg_poop");
   _PG_init__pgext();
   __pgext_after_init();
 }
