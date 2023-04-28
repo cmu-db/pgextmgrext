@@ -1,105 +1,74 @@
 #![allow(clippy::missing_safety_doc)]
 
+mod hook_ext;
+mod hook_mgr;
+mod hook_pregen;
+
+use hook_mgr::ALL_HOOKS;
 use pgrx::prelude::*;
 
 pgrx::pg_module_magic!();
 
 static mut INSTALLED_PLUGINS: Vec<String> = Vec::new();
-static mut PLANNER_HOOKS: Vec<(String, pgrx::pg_sys::planner_hook_type)> = Vec::new();
-static mut NEXT_HOOK_ID: usize = 0;
-static mut CURRENT_PLANNER_HOOK: pgrx::pg_sys::planner_hook_type = None;
-
-const ENABLE_LOGGING: bool = true;
-
-fn get_next_planner_hook() -> pgrx::pg_sys::planner_hook_type {
-  unsafe {
-    let id = NEXT_HOOK_ID;
-    NEXT_HOOK_ID += 1;
-    PREGENERATED_PLANNER_HOOKS[id]
-  }
-}
+pub const ENABLE_LOGGING: bool = true;
 
 #[pg_guard]
 #[no_mangle]
 unsafe extern "C" fn __pgext_before_init(name: *const pgrx::ffi::c_char) {
   let plugin_name = std::ffi::CStr::from_ptr(name).to_string_lossy().into_owned();
   INSTALLED_PLUGINS.push(plugin_name);
-  let hook = get_next_planner_hook();
-  CURRENT_PLANNER_HOOK = hook;
-  pgrx::pg_sys::planner_hook = hook;
+  pgrx::pg_sys::planner_hook = ALL_HOOKS.planner_hook.before_register();
+  pgrx::pg_sys::ExecutorRun_hook = ALL_HOOKS.executor_run_hook.before_register();
+  pgrx::pg_sys::ExecutorStart_hook = ALL_HOOKS.executor_start_hook.before_register();
+  pgrx::pg_sys::ExecutorEnd_hook = ALL_HOOKS.executor_end_hook.before_register();
+  pgrx::pg_sys::ExecutorFinish_hook = ALL_HOOKS.executor_finish_hook.before_register();
 }
 
 #[pg_guard]
 #[no_mangle]
 pub unsafe extern "C" fn __pgext_after_init() {
-  if pgrx::pg_sys::planner_hook != CURRENT_PLANNER_HOOK {
-    PLANNER_HOOKS.push((INSTALLED_PLUGINS.last().unwrap().clone(), pgrx::pg_sys::planner_hook));
-    pgrx::pg_sys::planner_hook = Some(pgext_planner_hook);
+  let p = INSTALLED_PLUGINS.last().unwrap().clone();
+  if ALL_HOOKS
+    .planner_hook
+    .after_register(p.clone(), pgrx::pg_sys::planner_hook)
+  {
+    pgrx::pg_sys::planner_hook = Some(hook_ext::pgext_planner_hook);
   } else {
-    NEXT_HOOK_ID -= 1;
+    pgrx::pg_sys::planner_hook = None;
   }
-}
-
-/// Postgres will directly call this hook.
-#[pg_guard]
-pub unsafe extern "C" fn pgext_planner_hook(
-  parse: *mut pgrx::pg_sys::Query,
-  query_string: *const ::std::os::raw::c_char,
-  cursor_options: ::std::os::raw::c_int,
-  bound_params: pgrx::pg_sys::ParamListInfo,
-) -> *mut pgrx::pg_sys::PlannedStmt {
-  let (ref name, hook) = PLANNER_HOOKS[0];
-  if ENABLE_LOGGING {
-    info!("pgext_planner_hook: {}", name);
-  }
-  hook.unwrap()(parse, query_string, cursor_options, bound_params)
-}
-
-/// All extensions will call this hook after finishing their own work.
-unsafe fn pgext_planner_hook_cb(
-  id: usize,
-  parse: *mut pgrx::pg_sys::Query,
-  query_string: *const ::std::os::raw::c_char,
-  cursor_options: ::std::os::raw::c_int,
-  bound_params: pgrx::pg_sys::ParamListInfo,
-) -> *mut pgrx::pg_sys::PlannedStmt {
-  if let Some((name, hook)) = PLANNER_HOOKS.get(id + 1) {
-    if ENABLE_LOGGING {
-      info!("pgext_planner_hook: {}", name);
-    }
-    // find the next extension in the saved planner hooks and call it
-    hook.unwrap()(parse, query_string, cursor_options, bound_params)
+  if ALL_HOOKS
+    .executor_start_hook
+    .after_register(p.clone(), pgrx::pg_sys::ExecutorStart_hook)
+  {
+    pgrx::pg_sys::ExecutorStart_hook = Some(hook_ext::pgext_executor_start_hook);
   } else {
-    // call the Postgres planner hook
-    pgrx::pg_sys::standard_planner(parse, query_string, cursor_options, bound_params)
+    pgrx::pg_sys::ExecutorStart_hook = None;
+  }
+  if ALL_HOOKS
+    .executor_run_hook
+    .after_register(p.clone(), pgrx::pg_sys::ExecutorRun_hook)
+  {
+    pgrx::pg_sys::ExecutorRun_hook = Some(hook_ext::pgext_executor_run_hook);
+  } else {
+    pgrx::pg_sys::ExecutorRun_hook = None;
+  }
+  if ALL_HOOKS
+    .executor_finish_hook
+    .after_register(p.clone(), pgrx::pg_sys::ExecutorFinish_hook)
+  {
+    pgrx::pg_sys::ExecutorFinish_hook = Some(hook_ext::pgext_executor_finish_hook);
+  } else {
+    pgrx::pg_sys::ExecutorFinish_hook = None;
+  }
+  if ALL_HOOKS
+    .executor_end_hook
+    .after_register(p.clone(), pgrx::pg_sys::ExecutorEnd_hook)
+  {
+    pgrx::pg_sys::ExecutorEnd_hook = Some(hook_ext::pgext_executor_end_hook);
+  } else {
+    pgrx::pg_sys::ExecutorEnd_hook = None;
   }
 }
-
-macro_rules! generate_planner_hook_copy {
-  ( $($id:tt),* ) => {
-    $(
-      paste::paste! {
-        #[pg_guard]
-        unsafe extern "C" fn [< __pgext_planner_hook_ $id >](
-          parse: *mut pgrx::pg_sys::Query,
-          query_string: *const ::std::os::raw::c_char,
-          cursor_options: ::std::os::raw::c_int,
-          bound_params: pgrx::pg_sys::ParamListInfo,
-        ) -> *mut pgrx::pg_sys::PlannedStmt {
-          pgext_planner_hook_cb($id, parse, query_string, cursor_options, bound_params)
-        }
-      }
-    )*
-
-    static PREGENERATED_PLANNER_HOOKS: &[pgrx::pg_sys::planner_hook_type] = &[
-      $(
-        paste::paste! { Some([< __pgext_planner_hook_ $id >]) }
-      ),*
-    ];
-  };
-}
-
-generate_planner_hook_copy! { 0, 1, 2, 3, 4, 5 }
 
 #[pg_extern]
 fn all() -> TableIterator<'static, (name!(order, i64), name!(plugin, String))> {
@@ -114,13 +83,55 @@ fn all() -> TableIterator<'static, (name!(order, i64), name!(plugin, String))> {
 
 #[pg_extern]
 fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), name!(plugin, String))> {
-  TableIterator::new(unsafe {
-    PLANNER_HOOKS
-      .clone()
-      .into_iter()
-      .enumerate()
-      .map(|(id, (name, _))| ("planner_hook".to_string(), id as i64, name))
-  })
+  let mut data = vec![];
+  unsafe {
+    data.extend(
+      ALL_HOOKS
+        .planner_hook
+        .hooks()
+        .to_vec()
+        .into_iter()
+        .enumerate()
+        .map(|(id, (name, _))| ("planner_hook".to_string(), id as i64, name)),
+    );
+    data.extend(
+      ALL_HOOKS
+        .executor_start_hook
+        .hooks()
+        .to_vec()
+        .into_iter()
+        .enumerate()
+        .map(|(id, (name, _))| ("executor_start_hook".to_string(), id as i64, name)),
+    );
+    data.extend(
+      ALL_HOOKS
+        .executor_run_hook
+        .hooks()
+        .to_vec()
+        .into_iter()
+        .enumerate()
+        .map(|(id, (name, _))| ("executor_run_hook".to_string(), id as i64, name)),
+    );
+    data.extend(
+      ALL_HOOKS
+        .executor_finish_hook
+        .hooks()
+        .to_vec()
+        .into_iter()
+        .enumerate()
+        .map(|(id, (name, _))| ("executor_finish_hook".to_string(), id as i64, name)),
+    );
+    data.extend(
+      ALL_HOOKS
+        .executor_end_hook
+        .hooks()
+        .to_vec()
+        .into_iter()
+        .enumerate()
+        .map(|(id, (name, _))| ("executor_end_hook".to_string(), id as i64, name)),
+    );
+  }
+  TableIterator::new(data.into_iter())
 }
 
 #[cfg(any(test, feature = "pg_test"))]
