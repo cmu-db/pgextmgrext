@@ -54,3 +54,65 @@ macro_rules! for_all_plpgsql_hooks {
     }
   };
 }
+
+#[macro_export]
+macro_rules! planner_hook_params {
+  ([ $($x:tt),* ] $macro:ident) => {
+    $macro! {
+      [ $($x),* ] {
+        parse: *mut pgrx::pg_sys::Query,
+        query_string: *const ::std::os::raw::c_char,
+        cursor_options: ::std::os::raw::c_int,
+        bound_params: pgrx::pg_sys::ParamListInfo,
+      }
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! executor_start_hook_params {
+  ([ $($x:tt),* ] $macro:ident) => {
+    $macro! {
+      [ $($x),* ] {
+        query_desc: *mut QueryDesc,
+        eflags: c_int,
+      }
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! executor_run_hook_params {
+  ([ $($x:tt),* ] $macro:ident) => {
+    $macro! {
+      [ $($x),* ] {
+        query_desc: *mut QueryDesc,
+        direction: ScanDirection,
+        count: uint64,
+        execute_once: bool,
+      }
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! executor_finish_hook_params {
+  ([ $($x:tt),* ] $macro:ident) => {
+    $macro! {
+      [ $($x),* ] {
+        query_desc: *mut QueryDesc,
+      }
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! executor_end_hook_params {
+  ([ $($x:tt),* ] $macro:ident) => {
+    $macro! {
+      [ $($x),* ] {
+        query_desc: *mut QueryDesc,
+      }
+    }
+  };
+}
