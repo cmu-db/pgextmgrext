@@ -62,7 +62,7 @@ pub unsafe extern "C" fn __pgext_after_init() {
   }
   if ALL_HOOKS
     .executor_end_hook
-    .after_register(p.clone(), pgrx::pg_sys::ExecutorEnd_hook)
+    .after_register(p, pgrx::pg_sys::ExecutorEnd_hook)
   {
     pgrx::pg_sys::ExecutorEnd_hook = Some(hook_ext::pgext_executor_end_hook);
   } else {
@@ -89,8 +89,8 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
       ALL_HOOKS
         .planner_hook
         .hooks()
-        .to_vec()
-        .into_iter()
+        .iter()
+        .cloned()
         .enumerate()
         .map(|(id, (name, _))| ("planner_hook".to_string(), id as i64, name)),
     );
@@ -98,8 +98,8 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
       ALL_HOOKS
         .executor_start_hook
         .hooks()
-        .to_vec()
-        .into_iter()
+        .iter()
+        .cloned()
         .enumerate()
         .map(|(id, (name, _))| ("executor_start_hook".to_string(), id as i64, name)),
     );
@@ -107,8 +107,8 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
       ALL_HOOKS
         .executor_run_hook
         .hooks()
-        .to_vec()
-        .into_iter()
+        .iter()
+        .cloned()
         .enumerate()
         .map(|(id, (name, _))| ("executor_run_hook".to_string(), id as i64, name)),
     );
@@ -116,8 +116,8 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
       ALL_HOOKS
         .executor_finish_hook
         .hooks()
-        .to_vec()
-        .into_iter()
+        .iter()
+        .cloned()
         .enumerate()
         .map(|(id, (name, _))| ("executor_finish_hook".to_string(), id as i64, name)),
     );
@@ -125,8 +125,8 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
       ALL_HOOKS
         .executor_end_hook
         .hooks()
-        .to_vec()
-        .into_iter()
+        .iter()
+        .cloned()
         .enumerate()
         .map(|(id, (name, _))| ("executor_end_hook".to_string(), id as i64, name)),
     );

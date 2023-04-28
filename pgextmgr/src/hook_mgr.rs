@@ -66,9 +66,9 @@ impl AllHooks {
 }
 
 pub static mut ALL_HOOKS: AllHooks = AllHooks::new(
-  &crate::hook_pregen::PREGENERATED_PLANNER_HOOKS,
-  &crate::hook_pregen::PREGENERATED_EXECUTOR_START_HOOKS,
-  &crate::hook_pregen::PREGENERATED_EXECUTOR_RUN_HOOKS,
-  &crate::hook_pregen::PREGENERATED_EXECUTOR_FINISH_HOOKS,
-  &crate::hook_pregen::PREGENERATED_EXECUTOR_END_HOOKS,
+  crate::hook_pregen::PREGENERATED_PLANNER_HOOKS,
+  crate::hook_pregen::PREGENERATED_EXECUTOR_START_HOOKS,
+  crate::hook_pregen::PREGENERATED_EXECUTOR_RUN_HOOKS,
+  crate::hook_pregen::PREGENERATED_EXECUTOR_FINISH_HOOKS,
+  crate::hook_pregen::PREGENERATED_EXECUTOR_END_HOOKS,
 );
