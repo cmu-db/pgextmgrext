@@ -1,9 +1,20 @@
 use pgrx::pg_sys::*;
 
+use crate::api;
+
+pub enum HookType<T> {
+  /// Compatible mode, when extensions are using the original way of registering
+  /// hooks.
+  Compatible(T),
+  /// PgExt mode, where extensions registers before and after hooks.
+  PgExt(T, T),
+}
+
 pub struct HookMgr<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> {
   available_callbacks: &'static [T],
-  hooks: Vec<(P, T)>,
+  hooks: Vec<(P, HookType<T>)>,
   next_hook_id: usize,
+  registered: bool,
 }
 
 impl<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> HookMgr<P, T> {
@@ -12,11 +23,13 @@ impl<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> HookMgr<P, T> {
       available_callbacks,
       hooks: Vec::new(),
       next_hook_id: 0,
+      registered: false,
     }
   }
 
   pub fn before_register(&mut self) -> T {
     if let Some(hook) = self.available_callbacks.get(self.next_hook_id) {
+      self.registered = false;
       self.next_hook_id += 1;
       *hook
     } else {
@@ -28,13 +41,20 @@ impl<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> HookMgr<P, T> {
     if hook == self.available_callbacks[self.next_hook_id - 1] {
       // the extension is not using this hook
       self.next_hook_id -= 1;
-      return false;
+      return self.registered;
     }
-    self.hooks.push((plugin, hook));
+    assert!(!self.registered, "extension registered twice");
+    self.hooks.push((plugin, HookType::Compatible(hook)));
     true
   }
 
-  pub fn hooks(&self) -> &[(P, T)] {
+  pub fn register(&mut self, plugin: P, before: T, after: T) {
+    assert!(!self.registered, "extension registered twice");
+    self.registered = true;
+    self.hooks.push((plugin, HookType::PgExt(before, after)));
+  }
+
+  pub fn hooks(&self) -> &[(P, HookType<T>)] {
     &self.hooks
   }
 }
@@ -45,6 +65,7 @@ pub struct AllHooks {
   pub executor_run_hook: HookMgr<std::string::String, ExecutorRun_hook_type>,
   pub executor_finish_hook: HookMgr<std::string::String, ExecutorFinish_hook_type>,
   pub executor_end_hook: HookMgr<std::string::String, ExecutorEnd_hook_type>,
+  pub rewriters: Vec<(std::string::String, api::OutputRewriter)>,
 }
 
 impl AllHooks {
@@ -61,6 +82,7 @@ impl AllHooks {
       executor_run_hook: HookMgr::new(c),
       executor_finish_hook: HookMgr::new(d),
       executor_end_hook: HookMgr::new(e),
+      rewriters: Vec::new(),
     }
   }
 }

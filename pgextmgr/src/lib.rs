@@ -1,8 +1,10 @@
 #![allow(clippy::missing_safety_doc)]
 
+pub mod api;
 mod hook_ext;
 mod hook_mgr;
 mod hook_pregen;
+mod output_rewriter;
 
 use hook_mgr::ALL_HOOKS;
 use pgrx::prelude::*;
@@ -10,18 +12,19 @@ use pgrx::prelude::*;
 pgrx::pg_module_magic!();
 
 static mut INSTALLED_PLUGINS: Vec<String> = Vec::new();
-pub const ENABLE_LOGGING: bool = true;
+const ENABLE_LOGGING: bool = true;
 
 #[pg_guard]
 #[no_mangle]
-unsafe extern "C" fn __pgext_before_init(name: *const pgrx::ffi::c_char) {
+pub unsafe extern "C" fn __pgext_before_init(name: *const pgrx::ffi::c_char) -> *mut api::PgExtApi {
   let plugin_name = std::ffi::CStr::from_ptr(name).to_string_lossy().into_owned();
-  INSTALLED_PLUGINS.push(plugin_name);
+  INSTALLED_PLUGINS.push(plugin_name.clone());
   pgrx::pg_sys::planner_hook = ALL_HOOKS.planner_hook.before_register();
   pgrx::pg_sys::ExecutorRun_hook = ALL_HOOKS.executor_run_hook.before_register();
   pgrx::pg_sys::ExecutorStart_hook = ALL_HOOKS.executor_start_hook.before_register();
   pgrx::pg_sys::ExecutorEnd_hook = ALL_HOOKS.executor_end_hook.before_register();
   pgrx::pg_sys::ExecutorFinish_hook = ALL_HOOKS.executor_finish_hook.before_register();
+  Box::leak(Box::new(api::PgExtApi::new(plugin_name)))
 }
 
 #[pg_guard]
@@ -90,45 +93,47 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
         .planner_hook
         .hooks()
         .iter()
-        .cloned()
         .enumerate()
-        .map(|(id, (name, _))| ("planner_hook".to_string(), id as i64, name)),
+        .map(|(id, (name, _))| ("planner_hook".to_string(), id as i64, name.clone())),
     );
     data.extend(
       ALL_HOOKS
         .executor_start_hook
         .hooks()
         .iter()
-        .cloned()
         .enumerate()
-        .map(|(id, (name, _))| ("executor_start_hook".to_string(), id as i64, name)),
+        .map(|(id, (name, _))| ("executor_start_hook".to_string(), id as i64, name.clone())),
     );
     data.extend(
       ALL_HOOKS
         .executor_run_hook
         .hooks()
         .iter()
-        .cloned()
         .enumerate()
-        .map(|(id, (name, _))| ("executor_run_hook".to_string(), id as i64, name)),
+        .map(|(id, (name, _))| ("executor_run_hook".to_string(), id as i64, name.clone())),
     );
     data.extend(
       ALL_HOOKS
         .executor_finish_hook
         .hooks()
         .iter()
-        .cloned()
         .enumerate()
-        .map(|(id, (name, _))| ("executor_finish_hook".to_string(), id as i64, name)),
+        .map(|(id, (name, _))| ("executor_finish_hook".to_string(), id as i64, name.clone())),
     );
     data.extend(
       ALL_HOOKS
         .executor_end_hook
         .hooks()
         .iter()
-        .cloned()
         .enumerate()
-        .map(|(id, (name, _))| ("executor_end_hook".to_string(), id as i64, name)),
+        .map(|(id, (name, _))| ("executor_end_hook".to_string(), id as i64, name.clone())),
+    );
+    data.extend(
+      ALL_HOOKS
+        .rewriters
+        .iter()
+        .enumerate()
+        .map(|(id, (name, _))| ("pgext_rewriters".to_string(), id as i64, name.clone())),
     );
   }
   TableIterator::new(data.into_iter())
