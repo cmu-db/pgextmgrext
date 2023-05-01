@@ -1059,6 +1059,7 @@ name = "pgextmgr"
 version = "0.0.0"
 dependencies = [
  "paste",
+ "pgext-hook-macros",
  "pgrx",
  "pgrx-tests",
 ]
