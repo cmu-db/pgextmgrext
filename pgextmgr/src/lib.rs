@@ -19,11 +19,23 @@ const ENABLE_LOGGING: bool = true;
 pub unsafe extern "C" fn __pgext_before_init(name: *const pgrx::ffi::c_char) -> *mut api::PgExtApi {
   let plugin_name = std::ffi::CStr::from_ptr(name).to_string_lossy().into_owned();
   INSTALLED_PLUGINS.push(plugin_name.clone());
-  pgrx::pg_sys::planner_hook = ALL_HOOKS.planner_hook.before_register();
-  pgrx::pg_sys::ExecutorRun_hook = ALL_HOOKS.executor_run_hook.before_register();
-  pgrx::pg_sys::ExecutorStart_hook = ALL_HOOKS.executor_start_hook.before_register();
-  pgrx::pg_sys::ExecutorEnd_hook = ALL_HOOKS.executor_end_hook.before_register();
-  pgrx::pg_sys::ExecutorFinish_hook = ALL_HOOKS.executor_finish_hook.before_register();
+  pgrx::pg_sys::planner_hook = ALL_HOOKS
+    .planner_hook
+    .before_register(Some(hook_ext::pgext_planner_hook), pgrx::pg_sys::planner_hook);
+  pgrx::pg_sys::ExecutorRun_hook = ALL_HOOKS
+    .executor_run_hook
+    .before_register(Some(hook_ext::pgext_executor_run_hook), pgrx::pg_sys::ExecutorRun_hook);
+  pgrx::pg_sys::ExecutorStart_hook = ALL_HOOKS.executor_start_hook.before_register(
+    Some(hook_ext::pgext_executor_start_hook),
+    pgrx::pg_sys::ExecutorStart_hook,
+  );
+  pgrx::pg_sys::ExecutorEnd_hook = ALL_HOOKS
+    .executor_end_hook
+    .before_register(Some(hook_ext::pgext_executor_end_hook), pgrx::pg_sys::ExecutorEnd_hook);
+  pgrx::pg_sys::ExecutorFinish_hook = ALL_HOOKS.executor_finish_hook.before_register(
+    Some(hook_ext::pgext_executor_finish_hook),
+    pgrx::pg_sys::ExecutorFinish_hook,
+  );
   Box::leak(Box::new(api::PgExtApi::new(plugin_name)))
 }
 
@@ -31,46 +43,21 @@ pub unsafe extern "C" fn __pgext_before_init(name: *const pgrx::ffi::c_char) -> 
 #[no_mangle]
 pub unsafe extern "C" fn __pgext_after_init() {
   let p = INSTALLED_PLUGINS.last().unwrap().clone();
-  if ALL_HOOKS
+  pgrx::pg_sys::planner_hook = ALL_HOOKS
     .planner_hook
-    .after_register(p.clone(), pgrx::pg_sys::planner_hook)
-  {
-    pgrx::pg_sys::planner_hook = Some(hook_ext::pgext_planner_hook);
-  } else {
-    pgrx::pg_sys::planner_hook = None;
-  }
-  if ALL_HOOKS
+    .after_register(p.clone(), pgrx::pg_sys::planner_hook);
+  pgrx::pg_sys::ExecutorStart_hook = ALL_HOOKS
     .executor_start_hook
-    .after_register(p.clone(), pgrx::pg_sys::ExecutorStart_hook)
-  {
-    pgrx::pg_sys::ExecutorStart_hook = Some(hook_ext::pgext_executor_start_hook);
-  } else {
-    pgrx::pg_sys::ExecutorStart_hook = None;
-  }
-  if ALL_HOOKS
+    .after_register(p.clone(), pgrx::pg_sys::ExecutorStart_hook);
+  pgrx::pg_sys::ExecutorRun_hook = ALL_HOOKS
     .executor_run_hook
-    .after_register(p.clone(), pgrx::pg_sys::ExecutorRun_hook)
-  {
-    pgrx::pg_sys::ExecutorRun_hook = Some(hook_ext::pgext_executor_run_hook);
-  } else {
-    pgrx::pg_sys::ExecutorRun_hook = None;
-  }
-  if ALL_HOOKS
+    .after_register(p.clone(), pgrx::pg_sys::ExecutorRun_hook);
+  pgrx::pg_sys::ExecutorFinish_hook = ALL_HOOKS
     .executor_finish_hook
-    .after_register(p.clone(), pgrx::pg_sys::ExecutorFinish_hook)
-  {
-    pgrx::pg_sys::ExecutorFinish_hook = Some(hook_ext::pgext_executor_finish_hook);
-  } else {
-    pgrx::pg_sys::ExecutorFinish_hook = None;
-  }
-  if ALL_HOOKS
+    .after_register(p.clone(), pgrx::pg_sys::ExecutorFinish_hook);
+  pgrx::pg_sys::ExecutorEnd_hook = ALL_HOOKS
     .executor_end_hook
-    .after_register(p, pgrx::pg_sys::ExecutorEnd_hook)
-  {
-    pgrx::pg_sys::ExecutorEnd_hook = Some(hook_ext::pgext_executor_end_hook);
-  } else {
-    pgrx::pg_sys::ExecutorEnd_hook = None;
-  }
+    .after_register(p, pgrx::pg_sys::ExecutorEnd_hook);
 }
 
 #[pg_extern]

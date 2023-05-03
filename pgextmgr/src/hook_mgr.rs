@@ -15,6 +15,7 @@ pub struct HookMgr<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> {
   hooks: Vec<(P, HookType<T>)>,
   next_hook_id: usize,
   registered: bool,
+  prev_hook: Option<(T, T)>,
 }
 
 impl<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> HookMgr<P, T> {
@@ -24,28 +25,35 @@ impl<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> HookMgr<P, T> {
       hooks: Vec::new(),
       next_hook_id: 0,
       registered: false,
+      prev_hook: None,
     }
   }
 
-  pub fn before_register(&mut self) -> T {
+  pub fn before_register(&mut self, override_with: T, prev_hook: T) -> T {
     if let Some(hook) = self.available_callbacks.get(self.next_hook_id) {
       self.registered = false;
       self.next_hook_id += 1;
+      self.prev_hook = Some((override_with, prev_hook));
       *hook
     } else {
       panic!("too many extensions")
     }
   }
 
-  pub fn after_register(&mut self, plugin: P, hook: T) -> bool {
+  pub fn after_register(&mut self, plugin: P, hook: T) -> T {
+    let (override_with, prev_hook) = self.prev_hook.take().unwrap();
     if hook == self.available_callbacks[self.next_hook_id - 1] {
-      // the extension is not using this hook
-      self.next_hook_id -= 1;
-      return self.registered;
+      if self.registered {
+        return override_with;
+      } else {
+        // the extension is not using this hook
+        self.next_hook_id -= 1;
+        return prev_hook;
+      }
     }
     assert!(!self.registered, "extension registered twice");
     self.hooks.push((plugin, HookType::Compatible(hook)));
-    true
+    override_with
   }
 
   pub fn register(&mut self, plugin: P, before: T, after: T) {

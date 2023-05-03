@@ -106,7 +106,6 @@ pub(crate) unsafe extern "C" fn before_executor_run(query_desc: *mut QueryDesc, 
     }
     rewriters.push(rewriter);
   }
-  pgrx::info!("rewriter!");
   if !rewriters.is_empty() {
     (*query_desc).dest =
       Box::leak(Box::new(OutputDest::new(rewriters, (*query_desc).dest))) as *mut _ as *mut DestReceiver;
