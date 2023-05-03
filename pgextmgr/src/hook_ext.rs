@@ -7,7 +7,7 @@ use pgrx::pg_sys::*;
 use pgrx::prelude::*;
 
 use crate::hook_mgr::{HookType, ALL_HOOKS};
-use crate::ENABLE_LOGGING;
+use crate::{ENABLE_LOGGING, INSTALLED_PLUGINS_STATUS};
 
 macro_rules! build_hook_function {
   ([ $hook_func:ident, $cb_func:ident, $hook:ident, $standard_hook:ident, ($ret_ty:ty) ] { $( $param:ident : $t:ty ,)* }) => {
@@ -25,23 +25,33 @@ macro_rules! build_hook_function {
       $( $param : $t ,)*
     ) -> $ret_ty {
       if let Some((name, HookType::Compatible(hook))) = ALL_HOOKS.$hook.hooks().get(id) {
-        if ENABLE_LOGGING {
-          info!("{}: {}", stringify!($hook), name);
+        if let Some(&true) = INSTALLED_PLUGINS_STATUS.get(name) {
+          if ENABLE_LOGGING {
+            info!("{}: {} (compatible)", stringify!($hook), name);
+          }
+          // find the next extension in the saved planner hooks and call it
+          hook.unwrap()($( $param ),*)
+        } else {
+          // current hook disabled, skip
+          $cb_func(id + 1, $( $param ),*)
         }
-        // find the next extension in the saved planner hooks and call it
-        hook.unwrap()($( $param ),*)
       } else if let Some((name, HookType::PgExt(before, after))) = ALL_HOOKS.$hook.hooks().get(id) {
-        if ENABLE_LOGGING {
-          info!("{}: {}", stringify!($hook), name);
+        if let Some(&true) = INSTALLED_PLUGINS_STATUS.get(name) {
+          if ENABLE_LOGGING {
+            info!("{}: {} (pgext)", stringify!($hook), name);
+          }
+          // call the before hook
+          before.unwrap()($( $param ),*);
+
+          // call the next hook
+          $cb_func(id + 1, $( $param ),*);
+
+          // find the next extension in the saved planner hooks and call it
+          after.unwrap()($( $param ),*)
+        } else {
+          // current hook disabled, skip
+          $cb_func(id + 1, $( $param ),*)
         }
-        // call the before hook
-        before.unwrap()($( $param ),*);
-
-        // call the next hook
-        $cb_func(id + 1, $( $param ),*);
-
-        // find the next extension in the saved planner hooks and call it
-        after.unwrap()($( $param ),*)
       } else {
         // call the Postgres planner hook
         pgrx::pg_sys::$standard_hook($( $param ),*)
