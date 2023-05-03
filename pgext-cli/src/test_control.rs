@@ -144,7 +144,7 @@ pub fn pgx_start_pg15() -> Result<()> {
 
   if !output.status.success() {
     println!("{}", std::str::from_utf8(&output.stdout)?);
-    let log = home::home_dir().unwrap().join(".pgx").join("15.log"); // TODO: pgx should support this
+    let log = home::home_dir().unwrap().join(".pgrx").join("15.log"); // TODO: pgx should support this
     cmd!("tail", "-n", "50", log).run()?;
     return Err(anyhow::anyhow!("Failed to start pg15"));
   }

@@ -101,7 +101,7 @@ pub fn pgxs_installcheck(
   build_dir: &Path,
   pg_config: &str,
 ) -> Result<()> {
-  let pg_host = home::home_dir().unwrap().join(".pgx");
+  let pg_host = home::home_dir().unwrap().join(".pgrx");
   let final_path = if plugin.resolver.as_str() != "pgsrctree" {
     find_pgxs_path(build_dir)?
   } else {
