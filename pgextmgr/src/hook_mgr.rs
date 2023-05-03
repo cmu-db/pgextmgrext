@@ -73,7 +73,7 @@ pub struct AllHooks {
   pub executor_run_hook: HookMgr<std::string::String, ExecutorRun_hook_type>,
   pub executor_finish_hook: HookMgr<std::string::String, ExecutorFinish_hook_type>,
   pub executor_end_hook: HookMgr<std::string::String, ExecutorEnd_hook_type>,
-  pub rewriters: Vec<(std::string::String, api::OutputRewriter)>,
+  pub rewriters: Vec<(std::string::String, api::OutputRewriter, bool)>,
 }
 
 impl AllHooks {

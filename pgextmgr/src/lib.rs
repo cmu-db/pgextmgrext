@@ -6,12 +6,15 @@ mod hook_mgr;
 mod hook_pregen;
 mod output_rewriter;
 
+use std::collections::BTreeMap;
+
 use hook_mgr::ALL_HOOKS;
 use pgrx::prelude::*;
 
 pgrx::pg_module_magic!();
 
 static mut INSTALLED_PLUGINS: Vec<String> = Vec::new();
+static mut INSTALLED_PLUGINS_STATUS: BTreeMap<String, bool> = BTreeMap::new();
 const ENABLE_LOGGING: bool = true;
 
 #[pg_guard]
@@ -19,6 +22,7 @@ const ENABLE_LOGGING: bool = true;
 pub unsafe extern "C" fn __pgext_before_init(name: *const pgrx::ffi::c_char) -> *mut api::PgExtApi {
   let plugin_name = std::ffi::CStr::from_ptr(name).to_string_lossy().into_owned();
   INSTALLED_PLUGINS.push(plugin_name.clone());
+  INSTALLED_PLUGINS_STATUS.insert(plugin_name.clone(), true);
   pgrx::pg_sys::planner_hook = ALL_HOOKS
     .planner_hook
     .before_register(Some(hook_ext::pgext_planner_hook), pgrx::pg_sys::planner_hook);
@@ -61,14 +65,70 @@ pub unsafe extern "C" fn __pgext_after_init() {
 }
 
 #[pg_extern]
-fn all() -> TableIterator<'static, (name!(order, i64), name!(plugin, String))> {
+fn all() -> TableIterator<'static, (name!(order, i64), name!(plugin, String), name!(status, String))> {
   TableIterator::new(unsafe {
-    INSTALLED_PLUGINS
+    INSTALLED_PLUGINS_STATUS
       .clone()
       .into_iter()
       .enumerate()
-      .map(|(id, name)| (id as i64, name))
+      .map(|(id, (name, enabled))| {
+        (
+          id as i64,
+          name,
+          (if enabled { "enabled" } else { "disabled" }).to_string(),
+        )
+      })
   })
+}
+
+#[pg_guard]
+fn change_status(extension: &str, status: bool) -> i64 {
+  unsafe {
+    if let Some(enabled) = INSTALLED_PLUGINS_STATUS.get_mut(extension) {
+      *enabled = status;
+      ALL_HOOKS.rewriters.iter_mut().for_each(|(name, _, enabled)| {
+        if name == extension {
+          *enabled = status;
+        }
+      });
+      1
+    } else {
+      panic!("extension {} does not exist", extension)
+    }
+  }
+}
+
+#[pg_guard]
+fn change_status_all(status: bool) -> i64 {
+  unsafe {
+    INSTALLED_PLUGINS_STATUS.iter_mut().for_each(|(_, enabled)| {
+      *enabled = status;
+    });
+    ALL_HOOKS.rewriters.iter_mut().for_each(|(_, _, enabled)| {
+      *enabled = status;
+    });
+    INSTALLED_PLUGINS_STATUS.len() as i64
+  }
+}
+
+#[pg_extern]
+fn enable(extension: &str) -> i64 {
+  change_status(extension, true)
+}
+
+#[pg_extern]
+fn enable_all() -> i64 {
+  change_status_all(true)
+}
+
+#[pg_extern]
+fn disable(extension: &str) -> i64 {
+  change_status(extension, false)
+}
+
+#[pg_extern]
+fn disable_all() -> i64 {
+  change_status_all(false)
 }
 
 #[pg_extern]
@@ -120,7 +180,7 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
         .rewriters
         .iter()
         .enumerate()
-        .map(|(id, (name, _))| ("pgext_rewriters".to_string(), id as i64, name.clone())),
+        .map(|(id, (name, _, _))| ("pgext_rewriters".to_string(), id as i64, name.clone())),
     );
   }
   TableIterator::new(data.into_iter())
@@ -140,8 +200,8 @@ pub mod tests {
 
     Spi::connect(|client| {
       let table = client.select("SELECT * FROM pgextmgr.all()", None, None)?;
-      assert_eq!(table.columns()?, 2);
-      assert_eq!(table.len(), 3);
+      assert_eq!(table.columns()?, 3);
+      assert_eq!(table.len(), 4);
       let plugins = table
         .into_iter()
         .map(|x| x.get_datum_by_name("plugin").unwrap().value::<String>().unwrap())
@@ -149,6 +209,7 @@ pub mod tests {
       assert_eq!(
         plugins,
         vec![
+          Some("__pgext".to_string()),
           Some("pgext_pg_stat_statements".to_string()),
           Some("pgext_pg_hint_plan".to_string()),
           Some("pgext_pg_poop".to_string()),

@@ -98,13 +98,15 @@ impl OutputDest {
 
 pub(crate) unsafe extern "C" fn before_executor_run(query_desc: *mut QueryDesc, _: i32, _: u64, _: bool) {
   let mut rewriters: Vec<&'static OutputRewriter> = vec![];
-  for (_, rewriter) in &crate::ALL_HOOKS.rewriters {
-    if let Some(filter) = rewriter.filter {
-      if !filter(query_desc) {
-        continue;
+  for (_, rewriter, enabled) in &crate::ALL_HOOKS.rewriters {
+    if *enabled {
+      if let Some(filter) = rewriter.filter {
+        if !filter(query_desc) {
+          continue;
+        }
       }
+      rewriters.push(rewriter);
     }
-    rewriters.push(rewriter);
   }
   if !rewriters.is_empty() {
     (*query_desc).dest =
