@@ -28,7 +28,7 @@ static bool poopReceiveSlot(void *self, TupleTableSlot *slot, void *ctx,
     }
     bool isnull;
     Datum attr = slot_getattr(slot, i + 1, &isnull);
-    int64 vallen = toast_datum_size(attr);
+    int64 vallen = toast_raw_datum_size(attr) - VARHDRSZ;
 
     const char *poop_emoji = "\360\237\222\251";
     const int poop_emoji_len = 4;
