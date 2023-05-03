@@ -6,11 +6,11 @@ use pgext_hook_macros::*;
 use pgrx::pg_sys::*;
 use pgrx::prelude::*;
 
-use crate::hook_mgr::ALL_HOOKS;
+use crate::hook_mgr::{HookType, ALL_HOOKS};
 use crate::ENABLE_LOGGING;
 
 macro_rules! build_hook_function {
-  ([ $hook_func:ident, $cb_func:ident, $hook:ident, $standard_hook:ident, ($ret_ty:ty)] { $( $param:ident : $t:ty ,)* }) => {
+  ([ $hook_func:ident, $cb_func:ident, $hook:ident, $standard_hook:ident, ($ret_ty:ty) ] { $( $param:ident : $t:ty ,)* }) => {
     /// Postgres will directly call this hook.
     #[pg_guard]
     pub unsafe extern "C" fn $hook_func(
@@ -24,12 +24,24 @@ macro_rules! build_hook_function {
       id: usize,
       $( $param : $t ,)*
     ) -> $ret_ty {
-      if let Some((name, hook)) = ALL_HOOKS.$hook.hooks().get(id) {
+      if let Some((name, HookType::Compatible(hook))) = ALL_HOOKS.$hook.hooks().get(id) {
         if ENABLE_LOGGING {
           info!("{}: {}", stringify!($hook), name);
         }
         // find the next extension in the saved planner hooks and call it
         hook.unwrap()($( $param ),*)
+      } else if let Some((name, HookType::PgExt(before, after))) = ALL_HOOKS.$hook.hooks().get(id) {
+        if ENABLE_LOGGING {
+          info!("{}: {}", stringify!($hook), name);
+        }
+        // call the before hook
+        before.unwrap()($( $param ),*);
+
+        // call the next hook
+        $cb_func(id + 1, $( $param ),*);
+
+        // find the next extension in the saved planner hooks and call it
+        after.unwrap()($( $param ),*)
       } else {
         // call the Postgres planner hook
         pgrx::pg_sys::$standard_hook($( $param ),*)

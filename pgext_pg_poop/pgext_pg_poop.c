@@ -1,4 +1,3 @@
-#include "catalog/pg_type_d.h"
 #include "postgres.h"
 
 #include "access/detoast.h"
@@ -9,38 +8,14 @@
 #include "utils/lsyscache.h"
 #include "utils/palloc.h"
 
+#include "pgextmgr.h"
+
 PG_MODULE_MAGIC;
 
-#include "pgext.h"
+static struct PgExtApi *api;
 
-static planner_hook_type prev_planner = NULL;
-static ExecutorStart_hook_type prev_ExecutorStart_hook = NULL;
-static ExecutorRun_hook_type prev_ExecutorRun_hook = NULL;
-
-static PlannedStmt *test_plugin_planner_hook(Query *parse,
-                                             const char *query_string,
-                                             int cursorOptions,
-                                             ParamListInfo boundParams) {
-  elog(NOTICE, "test_plugin_planner_hook called");
-  if (prev_planner) {
-    return prev_planner(parse, query_string, cursorOptions, boundParams);
-  } else {
-    return standard_planner(parse, query_string, cursorOptions, boundParams);
-  }
-}
-
-static int depth = 0;
-
-struct _PoopReceiver {
-  DestReceiver self;
-  DestReceiver *recv;
-};
-
-typedef struct _PoopReceiver PoopReceiver;
-
-static bool poopReceiveSlot(TupleTableSlot *slot, DestReceiver *self) {
-  PoopReceiver *poop = (PoopReceiver *)self;
-
+static bool poopReceiveSlot(void *self, TupleTableSlot *slot, void *ctx,
+                            bool (*cb)(void *)) {
   TupleDesc typeinfo = slot->tts_tupleDescriptor;
   int natts = typeinfo->natts;
   bytea **bb = palloc_array(bytea *, natts);
@@ -68,7 +43,7 @@ static bool poopReceiveSlot(TupleTableSlot *slot, DestReceiver *self) {
     slot->tts_values[i] = PointerGetDatum(b);
   }
 
-  bool res = poop->recv->receiveSlot(slot, poop->recv);
+  bool res = cb(ctx);
 
   for (int i = 0; i < natts; ++i) {
     if (bb[i]) {
@@ -81,62 +56,14 @@ static bool poopReceiveSlot(TupleTableSlot *slot, DestReceiver *self) {
   return res;
 }
 
-static void poopStartup(DestReceiver *self, int operation, TupleDesc typeinfo) {
-  PoopReceiver *poop = (PoopReceiver *)self;
-  poop->recv->rStartup(poop->recv, operation, typeinfo);
-}
-
-static void poopDestroy(DestReceiver *self) {
-  PoopReceiver *poop = (PoopReceiver *)self;
-  poop->recv->rDestroy(poop->recv);
-}
-
-static void poopShutdown(DestReceiver *self) {
-  PoopReceiver *poop = (PoopReceiver *)self;
-  poop->recv->rShutdown(poop->recv);
-}
-
-static PoopReceiver *make_poop_receiver(DestReceiver *recv) {
-  PoopReceiver *r = palloc(sizeof(PoopReceiver));
-  r->recv = recv;
-  r->self.rStartup = poopStartup;
-  r->self.rDestroy = poopDestroy;
-  r->self.rShutdown = poopShutdown;
-  r->self.receiveSlot = poopReceiveSlot;
-  r->self.mydest = recv->mydest;
-  return r;
-}
-
-static void pg_poop_executor_start_hook(QueryDesc *queryDesc, int eflags) {
-  if (prev_ExecutorStart_hook) {
-    prev_ExecutorStart_hook(queryDesc, eflags);
-  } else {
-    standard_ExecutorStart(queryDesc, eflags);
-  }
-}
-
-static void pg_poop_executor_run_hook(QueryDesc *queryDesc,
-                                      ScanDirection direction, uint64 count,
-                                      bool execute_once) {
-  // TODO: only do this for the 0-th depth
-  MemoryContext oldcontext;
-  oldcontext = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
-  PoopReceiver *dest = make_poop_receiver(queryDesc->dest);
-  queryDesc->dest = (DestReceiver *)dest;
-  MemoryContextSwitchTo(oldcontext);
-
-  if (prev_ExecutorRun_hook) {
-    prev_ExecutorRun_hook(queryDesc, direction, count, execute_once);
-  } else {
-    standard_ExecutorRun(queryDesc, direction, count, execute_once);
-  }
-}
-
 void _PG_init(void) {
-  prev_planner = planner_hook;
-  planner_hook = test_plugin_planner_hook;
-  prev_ExecutorStart_hook = ExecutorStart_hook;
-  ExecutorStart_hook = pg_poop_executor_start_hook;
-  prev_ExecutorRun_hook = ExecutorRun_hook;
-  ExecutorRun_hook = pg_poop_executor_run_hook;
+  api = __pgext_before_init("pgext_pg_poop");
+  OutputRewriter r;
+  r.destroy = NULL;
+  r.startup = NULL;
+  r.filter = NULL;
+  r.shutdown = NULL;
+  r.receive_slot = poopReceiveSlot;
+  api->register_output_rewriter(api, &r);
+  __pgext_after_init();
 }
