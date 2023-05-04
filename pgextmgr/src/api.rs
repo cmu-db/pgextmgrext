@@ -2,7 +2,7 @@ use std::ffi::c_int;
 
 use pgrx::pg_sys::{QueryDesc, TupleDesc, TupleTableSlot};
 
-use crate::{hook_mgr::ALL_HOOKS, INSTALLED_PLUGINS_STATUS};
+use crate::hook_mgr::ALL_HOOKS;
 
 pub type OutputRewriterFilter = Option<extern "C" fn(query_desc: *mut QueryDesc) -> bool>;
 pub type OutputRewriterStartup = Option<extern "C" fn(operation: c_int, type_info: TupleDesc) -> *mut std::ffi::c_void>;
@@ -42,19 +42,6 @@ impl PgExtApi {
   }
 
   unsafe extern "C" fn register_output_rewriter(api: &PgExtApi, rewriter: &OutputRewriter) {
-    if !ALL_HOOKS
-      .executor_run_hook
-      .hooks()
-      .iter()
-      .any(|(name, _)| name == "__pgext")
-    {
-      INSTALLED_PLUGINS_STATUS.insert("__pgext".to_string(), true);
-      ALL_HOOKS.executor_run_hook.register(
-        "__pgext".to_string(),
-        Some(crate::output_rewriter::before_executor_run),
-        Some(crate::output_rewriter::after_executor_run),
-      );
-    }
     ALL_HOOKS
       .rewriters
       .push(((*api.plugin).clone(), rewriter.clone(), true));

@@ -11,12 +11,23 @@ use crate::{ENABLE_LOGGING, INSTALLED_PLUGINS_STATUS};
 
 macro_rules! build_hook_function {
   ([ $hook_func:ident, $cb_func:ident, $hook:ident, $standard_hook:ident, ($ret_ty:ty) ] { $( $param:ident : $t:ty ,)* }) => {
+    paste::paste! { pub(crate) static mut [< $hook:upper _NESTED_DEPTH >] : usize = 0; }
+
     /// Postgres will directly call this hook.
     #[pg_guard]
     pub unsafe extern "C" fn $hook_func(
       $( $param : $t ,)*
     ) -> $ret_ty {
-      $cb_func(0, $( $param ),*)
+      PgTryBuilder::new(|| {
+        let depth = paste::paste! { &mut [< $hook:upper _NESTED_DEPTH >] };
+        *depth += 1;
+        $cb_func(0, $( $param ),*)
+      })
+      .finally(|| {
+        let depth = paste::paste! { &mut [< $hook:upper _NESTED_DEPTH >] };
+        *depth -= 1;
+      })
+      .execute()
     }
 
     /// All extensions will call this hook after finishing their own work.
