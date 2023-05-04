@@ -12,7 +12,7 @@ pg15 = ["pgrx/pg15", "pgrx-tests/pg15"]
 pg_test = []
 
 [dependencies]
-pgrx = "0.8"
+pgrx = "~0.8.0"
 pgext-hook-macros = { path = "../pgext-hook-macros" }
 
 [dev-dependencies]
