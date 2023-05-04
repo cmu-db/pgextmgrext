@@ -23,7 +23,7 @@ static bool poopReceiveSlot(void *self, TupleTableSlot *slot, void *ctx,
   for (int i = 0; i < natts; ++i) {
     bb[i] = NULL;
     Oid ty = TupleDescAttr(typeinfo, i)->atttypid;
-    if (ty != VARCHAROID) {
+    if (ty != VARCHAROID && ty != TEXTOID) {
       continue;
     }
     bool isnull;
