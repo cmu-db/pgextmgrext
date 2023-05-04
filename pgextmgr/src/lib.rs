@@ -17,7 +17,7 @@ pgrx::pg_module_magic!();
 
 static mut INSTALLED_PLUGINS: Vec<String> = Vec::new();
 static mut INSTALLED_PLUGINS_STATUS: BTreeMap<String, bool> = BTreeMap::new();
-const ENABLE_LOGGING: bool = true;
+const ENABLE_LOGGING: bool = false;
 
 #[pg_guard]
 #[no_mangle]
@@ -69,17 +69,16 @@ pub unsafe extern "C" fn __pgext_after_init() {
 #[pg_extern]
 fn all() -> TableIterator<'static, (name!(order, i64), name!(plugin, String), name!(status, String))> {
   TableIterator::new(unsafe {
-    INSTALLED_PLUGINS_STATUS
-      .clone()
-      .into_iter()
-      .enumerate()
-      .map(|(id, (name, enabled))| {
-        (
-          id as i64,
-          name,
-          (if enabled { "enabled" } else { "disabled" }).to_string(),
-        )
-      })
+    INSTALLED_PLUGINS.clone().into_iter().enumerate().map(|(id, name)| {
+      let enabled = {
+        if let Some(&true) = INSTALLED_PLUGINS_STATUS.get(&name) {
+          "enabled"
+        } else {
+          "disabled"
+        }
+      };
+      (id as i64, name, enabled.to_string())
+    })
   })
 }
 
@@ -202,7 +201,7 @@ unsafe extern "C" fn _PG_init() {
 #[cfg(any(test, feature = "pg_test"))]
 #[pg_schema]
 pub mod tests {
-  use pgrx::prelude::*;
+  use pgrx::{prelude::*, spi::SpiClient};
 
   #[pg_test]
   #[search_path(@extschema@)]
@@ -228,6 +227,73 @@ pub mod tests {
           Some("pgext_pg_poop".to_string()),
         ]
       );
+
+      Ok::<_, pgrx::spi::Error>(())
+    })?;
+
+    Ok(())
+  }
+
+  /// Count the number of enabled plugins
+  fn count_enabled_plugins(client: &SpiClient) -> Result<Option<i64>, spi::Error> {
+    let table = client.select(
+      "SELECT COUNT(*) FROM pgextmgr.all() where status = 'enabled'",
+      None,
+      None,
+    )?;
+
+    let enabled_count = table
+      .into_iter()
+      .next()
+      .map(|x| x.get_datum_by_ordinal(1)?.value::<i64>())
+      .unwrap();
+
+    enabled_count
+  }
+
+  /// Gets the status of a plugin by name
+  fn get_plugin_status(client: &SpiClient, plugin: &str) -> Result<Option<String>, spi::Error> {
+    let query = format!("SELECT status FROM pgextmgr.all() where plugin = '{}'", plugin);
+    let table = client.select(&query, None, None)?;
+    let status = table
+      .into_iter()
+      .next()
+      .map(|x| x.get_datum_by_ordinal(1)?.value::<String>())
+      .unwrap();
+
+    status
+  }
+
+  #[pg_test]
+  #[search_path(@extschema@)]
+  fn test_plugin_enable() -> Result<(), spi::Error> {
+    Spi::run("CREATE EXTENSION pgext_pg_poop;")?;
+    Spi::run("CREATE EXTENSION pgext_pg_stat_statements;")?;
+    Spi::run("CREATE EXTENSION pgext_pg_hint_plan;")?;
+
+    Spi::connect(|client| {
+      // enabled all 4 extensions
+      client.select("SELECT pgextmgr.enable_all()", None, None)?;
+
+      let enabled_count = count_enabled_plugins(&client)?;
+      assert_eq!(enabled_count, Some(4));
+
+      // check status of pg_poop is enabled
+      let status = get_plugin_status(&client, "pgext_pg_poop")?;
+      assert_eq!(status, Some("enabled".to_string()));
+
+      // disable pg_poop extension, number of enabled extension - 1
+      client.select("SELECT pgextmgr.disable('pgext_pg_poop')", None, None)?;
+
+      let status = get_plugin_status(&client, "pgext_pg_poop")?;
+      assert_eq!(status, Some("disabled".to_string()));
+      let enabled_count = count_enabled_plugins(&client)?;
+      assert_eq!(enabled_count, Some(3));
+
+      // disable all extensions
+      client.select("SELECT pgextmgr.disable_all()", None, None)?;
+      let enabled_count = count_enabled_plugins(&client)?;
+      assert_eq!(enabled_count, Some(0));
 
       Ok::<_, pgrx::spi::Error>(())
     })?;
