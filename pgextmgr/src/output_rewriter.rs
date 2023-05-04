@@ -1,8 +1,12 @@
 use std::ffi::c_int;
 
 use pgrx::pg_sys::{DestReceiver, QueryDesc, TupleDescData, TupleTableSlot};
+use pgrx::PgMemoryContexts;
 
 use crate::api::OutputRewriter;
+use crate::hook_ext::EXECUTOR_RUN_HOOK_NESTED_DEPTH;
+
+const OUTPUT_REWRITER_DEST: u32 = 2333;
 
 #[repr(C)]
 struct OutputDest {
@@ -97,29 +101,25 @@ impl OutputDest {
 }
 
 pub(crate) unsafe extern "C" fn before_executor_run(query_desc: *mut QueryDesc, _: i32, _: u64, _: bool) {
-  let mut rewriters: Vec<&'static OutputRewriter> = vec![];
-  for (_, rewriter, enabled) in &crate::ALL_HOOKS.rewriters {
-    if *enabled {
-      if let Some(filter) = rewriter.filter {
-        if !filter(query_desc) {
-          continue;
+  if EXECUTOR_RUN_HOOK_NESTED_DEPTH == 1 {
+    let mut rewriters: Vec<&'static OutputRewriter> = vec![];
+    for (_, rewriter, enabled) in &crate::ALL_HOOKS.rewriters {
+      if *enabled {
+        if let Some(filter) = rewriter.filter {
+          if !filter(query_desc) {
+            continue;
+          }
         }
+        rewriters.push(rewriter);
       }
-      rewriters.push(rewriter);
     }
-  }
-  if !rewriters.is_empty() {
-    (*query_desc).dest =
-      Box::leak(Box::new(OutputDest::new(rewriters, (*query_desc).dest))) as *mut _ as *mut DestReceiver;
-  }
-}
-
-const OUTPUT_REWRITER_DEST: u32 = 2333;
-
-pub(crate) unsafe extern "C" fn after_executor_run(query_desc: *mut QueryDesc, _: i32, _: u64, _: bool) {
-  if let Some(dest) = (*query_desc).dest.as_mut() {
-    if dest.mydest == OUTPUT_REWRITER_DEST {
-      drop(Box::<OutputDest>::from_raw((*query_desc).dest as *mut OutputDest));
+    if !rewriters.is_empty() {
+      PgMemoryContexts::For((*(*query_desc).estate).es_query_cxt).switch_to(|context| {
+        (*query_desc).dest = context.leak_and_drop_on_delete(OutputDest::new(rewriters, (*query_desc).dest)) as *mut _
+          as *mut DestReceiver;
+      })
     }
   }
 }
+
+pub(crate) unsafe extern "C" fn after_executor_run(_: *mut QueryDesc, _: i32, _: u64, _: bool) {}

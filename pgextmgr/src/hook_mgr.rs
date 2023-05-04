@@ -62,6 +62,13 @@ impl<P: Clone, T: Copy + Clone + PartialEq + Eq + 'static> HookMgr<P, T> {
     self.hooks.push((plugin, HookType::PgExt(before, after)));
   }
 
+  // TODO: support register compatible hook, should return a callback function
+  // pub fn register_compatible(&mut self, plugin: P, hook: T) {
+  //   assert!(!self.registered, "extension registered twice");
+  //   self.registered = true;
+  //   self.hooks.push((plugin, HookType::Compatible(hook)));
+  // }
+
   pub fn hooks(&self) -> &[(P, HookType<T>)] {
     &self.hooks
   }

@@ -5,10 +5,12 @@ mod hook_ext;
 mod hook_mgr;
 mod hook_pregen;
 mod output_rewriter;
+mod pgext;
 
 use std::collections::BTreeMap;
 
 use hook_mgr::ALL_HOOKS;
+use pgrx::pg_sys::AsPgCStr;
 use pgrx::prelude::*;
 
 pgrx::pg_module_magic!();
@@ -184,6 +186,17 @@ fn hooks() -> TableIterator<'static, (name!(hook, String), name!(order, i64), na
     );
   }
   TableIterator::new(data.into_iter())
+}
+
+#[no_mangle]
+unsafe extern "C" fn _PG_init() {
+  __pgext_before_init("__pgext".as_pg_cstr());
+  ALL_HOOKS.executor_run_hook.register(
+    "__pgext".to_string(),
+    Some(crate::pgext::before_executor_run),
+    Some(crate::pgext::after_executor_run),
+  );
+  __pgext_after_init();
 }
 
 #[cfg(any(test, feature = "pg_test"))]
