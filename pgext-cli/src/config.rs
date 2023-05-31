@@ -31,11 +31,11 @@ pub fn edit_pgconf(db: &PluginDb, config: &WorkspaceConfig, plugins: &[Plugin]) 
       if shared_preloads.is_empty() {
         writeln!(new_pgconf, "shared_preload_libraries = ''  # modified by pgext")?;
       } else {
+        // pgcrypto needs to be special-cased since it shouldn't be in shared_preload_libraries
         writeln!(
           new_pgconf,
           "shared_preload_libraries = '{}' # modified by pgext",
-          shared_preloads.join(",")
-        )?;
+          shared_preloads.clone().into_iter().filter(|x| x != "pgcrypto").collect::<Vec<_>>().join(","))?;
       }
     } else if line.starts_with("session_preload_libraries = ") || line.starts_with("#session_preload_libraries = ") {
       writeln!(new_pgconf, "session_preload_libraries = ''  # modified by pgext")?;
